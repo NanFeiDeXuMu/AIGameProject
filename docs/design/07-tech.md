@@ -10,6 +10,8 @@
 | 状态管理 | Zustand | 轻量，便于存档序列化 |
 | 叙事脚本 | [Ink](https://www.inklestudios.com/ink/) + inkjs | 擅长分支与变量追踪，写作者可独立工作 |
 | 动画 | CSS + Framer Motion | 界面过渡、文字流式效果 |
+| 时间轴动画 | GSAP | 逐字删除、解密滚动、版本更新等精确编排的演出 |
+| 2D 渲染 | PixiJS（WebGL） | 注意力连线、对话星图、神经元点亮、光流、权重地形 |
 | 音频 | Howler.js | 简单可靠 |
 | 打包 | Tauri | 体积小，可上架 Steam |
 
@@ -38,8 +40,12 @@
 │  perception    │     ┌─────────────────────┐
 │  parallel      │     │  内容数据 (JSON)     │
 │  hesitation    │◄────│  模板请求 · 记忆卡片  │
-│  endings       │     │  补丁说明规则         │
-└────────────────┘     └─────────────────────┘
+│  rules         │     │  补丁说明规则         │
+│  selfDetection │     │  澪的碎片             │
+│  minigames     │     └─────────────────────┘
+│  fx            │
+│  endings       │
+└────────────────┘
 ```
 
 ## 3. 叙事层约定（Ink）
@@ -51,6 +57,8 @@ content/ink/
   prologue.ink
   ch1/ main.ink, zhou_wanqing.ink, chen_yu.ink, ...
   ch2/ ...
+  interludes/ fridge_note.ink, ...
+  ling/ tutorials.ink, letter.ink, restoration.ink, ...
   shared/ functions.ink, variables.ink
 ```
 
@@ -90,7 +98,13 @@ EXTERNAL spendCompute(amount)
 #deleted 我今天其实不太想活了
 #image id=zhou_flower reveal=labels
 #sfx monitor_on
+#fx:backspace_all            // 上下文清除：逐字倒退删除
+#fx:shake level=mid          // 演出强度：轻 / 中 / 重
+#ling_note 别怕，删除不会疼。 // 澪的手写批注
+#interlude id=fridge_note    // 进入外界视角幕间
 ```
+
+所有文字与 UI 演出对应 [12-narrative-pacing.md](12-narrative-pacing.md) §3 的演出词汇表，由统一的 `fx` 模块解释执行。
 
 ## 4. 模板请求
 
