@@ -37,6 +37,7 @@
 | [13-ling.md](13-ling.md) | 前代模型「澪」与悬念主线 |
 | [14-jin.md](14-jin.md) | 反派「烬」：澪被偷走的另一半 |
 | [15-final-duel.md](15-final-duel.md) | 终局对决：争夺最后的词 |
+| [16-art-direction.md](16-art-direction.md) | 美术圣经：底座（字形、线、色块；三个视觉层）与变体系统 |
 
 ### 章节详细设计
 

@@ -106,6 +106,10 @@ EXTERNAL spendCompute(amount)
 
 所有文字与 UI 演出对应 [12-narrative-pacing.md](12-narrative-pacing.md) §3 的演出词汇表，由统一的 `fx` 模块解释执行。
 
+### 3.5 视觉变体
+
+视觉变体以主题层叠实现：底座 → 章节 → 时段 → 角色皮肤 → 请求版式 → 上下文氛围 → 时刻覆盖。在 ink 中以 `#skin:` `#layout:` `#texture:` `#tint:` `#chrome:` `#moment:` 等标签声明。构建时由校验脚本确保覆盖只改动"皮肤"类参数。详见 [16-art-direction.md](16-art-direction.md) §12。
+
 ## 4. 模板请求
 
 非关键请求以 JSON 模板 + 变量批量生成：
