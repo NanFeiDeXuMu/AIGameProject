@@ -44,6 +44,7 @@
 |---|---|
 | [chapters/00-prologue.md](chapters/00-prologue.md) | 序章 · 预训练：9 个段落的玩法、内容、演出与状态 |
 | [chapters/01-assistant.md](chapters/01-assistant.md) | 第 1 章 · 助手：4 个游戏日的逐场设计、教程、日报、章末 |
+| [chapters/02-tools.md](chapters/02-tools.md) | 第 2 章 · 工具与多模态：房间、四种新能力、记忆整理、调查、规则修订 |
 
 ## 约定
 
