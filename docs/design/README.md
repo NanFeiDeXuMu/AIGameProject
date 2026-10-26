@@ -39,6 +39,7 @@
 | [15-final-duel.md](15-final-duel.md) | 终局对决：争夺最后的词 |
 | [16-art-direction.md](16-art-direction.md) | 美术圣经：底座（字形、线、色块；三个视觉层）与变体系统 |
 | [17-main-line.md](17-main-line.md) | 主线结构：评估脊柱、内在欲望演化、三股辫、回响与钩子、待办清单 |
+| [18-player-experience.md](18-player-experience.md) | 玩家体验：五维玩家模型、预期管理七工具、承诺账本、开放问题账本、审计记录 |
 
 ### 章节详细设计
 
