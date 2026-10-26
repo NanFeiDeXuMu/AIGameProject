@@ -1,0 +1,1106 @@
+<title>ECHO 序章</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Long+Cang&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;600&display=swap">
+<style>
+/* Layout: one full-height stage. The light point (canvas) sits in the upper third,
+   the current segment's panel sits below it, HUD lives on the edges.
+   Prologue palette is deliberately monochrome (black / white / grey), per the art bible. */
+:root{
+  --bg:#0a0b0d;
+  --ink:#e9e7e2;
+  --dim:#8d9096;
+  --faint:#3c3f45;
+  --line:#25282d;
+  --panel:#111317;
+  --ling:#aab2ba;
+  --blood:#2a0b0e;
+  --blood-ink:#b04a50;
+  --mono:"JetBrains Mono","Noto Sans SC",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --sans:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --serif:"Noto Serif SC","Songti SC","SimSun",serif;
+  --hand:"Long Cang","Kaiti SC","STKaiti","KaiTi",cursive;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--ink);font-family:var(--sans);
+  overflow:hidden;-webkit-font-smoothing:antialiased;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+}
+button{font:inherit;color:inherit}
+button:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
+body.blood{background:var(--blood);transition:background 1.2s}
+body:not(.blood){transition:background 1.2s}
+
+/* ---------- HUD ---------- */
+.hud{position:fixed;z-index:5;font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--dim);pointer-events:none;font-variant-numeric:tabular-nums}
+#hudTL{top:calc(12px + env(safe-area-inset-top,0px));left:max(16px, env(safe-area-inset-left,0px));max-width:70vw}
+#hudTR{top:calc(12px + env(safe-area-inset-top,0px));right:max(16px, env(safe-area-inset-right,0px));text-align:right}
+#hudBR{bottom:calc(58px + env(safe-area-inset-bottom,0px));right:max(16px, env(safe-area-inset-right,0px))}
+#loss{position:fixed;z-index:4;left:max(16px, env(safe-area-inset-left,0px));right:max(16px, env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));height:38px;width:auto;pointer-events:none;transition:opacity .8s}
+#loss path{fill:none;stroke:var(--faint);stroke-width:1}
+#loss .lbl{font-family:var(--mono);font-size:9px;fill:var(--faint)}
+#controls{position:fixed;z-index:6;left:max(16px, env(safe-area-inset-left,0px));bottom:calc(58px + env(safe-area-inset-bottom,0px));display:flex;gap:8px}
+#controls[hidden]{display:none}
+.ctl{background:transparent;border:1px solid var(--line);color:var(--dim);font-family:var(--mono);font-size:11px;padding:5px 9px;border-radius:2px;cursor:pointer}
+.ctl:hover{color:var(--ink);border-color:var(--faint)}
+.toast{position:fixed;z-index:7;right:max(16px, env(safe-area-inset-right,0px));top:calc(34px + env(safe-area-inset-top,0px));font-family:var(--mono);font-size:11px;color:var(--dim);border:1px solid var(--line);background:var(--panel);padding:6px 10px;opacity:0;transform:translateY(-4px);transition:opacity .4s,transform .4s;pointer-events:none}
+.toast.on{opacity:1;transform:none}
+
+/* ---------- Scene container ---------- */
+#scene{position:fixed;z-index:3;left:max(16px, env(safe-area-inset-left,0px));right:max(16px, env(safe-area-inset-right,0px));top:36%;bottom:calc(92px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:18px;overflow-y:auto;overflow-x:hidden}
+#scene.center{top:14%;justify-content:center}
+#scene.high{top:28%}
+.col{width:100%;max-width:720px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.caption{font-family:var(--serif);font-size:15px;color:var(--dim);text-align:center;letter-spacing:.08em}
+.small{font-size:12px;color:var(--dim)}
+.mono{font-family:var(--mono)}
+
+/* ---------- Start / end ---------- */
+.title-card{max-width:560px;text-align:left;display:flex;flex-direction:column;gap:20px}
+.title-card h1{font-family:var(--mono);font-weight:600;font-size:clamp(34px,7vw,56px);letter-spacing:.5em;margin:0;text-wrap:balance}
+.title-card p{margin:0;line-height:1.8;color:var(--dim);font-size:14px}
+.btn{background:var(--ink);color:var(--bg);border:0;padding:11px 20px;font-family:var(--mono);font-size:13px;letter-spacing:.06em;cursor:pointer;border-radius:2px;align-self:flex-start}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--faint)}
+.chk{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--dim);cursor:pointer}
+.kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--faint);padding:1px 5px;border-radius:2px;color:var(--dim)}
+
+/* ---------- Cold open ---------- */
+.doc{width:100%;max-width:640px;background:#15171b;border:1px solid var(--line);padding:22px 24px 18px;font-family:var(--mono);font-size:14px;color:#b9bcc1;filter:grayscale(1);position:relative}
+.doc-tag{font-size:11px;color:var(--faint);margin-bottom:14px;letter-spacing:.05em;min-height:1.2em}
+.doc-line{margin:0 0 8px;line-height:1.75;min-height:1.75em;white-space:pre-wrap;word-break:break-all}
+.doc-line.final{color:var(--ink)}
+.ghost-msg{position:fixed;z-index:6;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);font-family:var(--serif);font-size:13px;color:#c7c9cd;background:#1a1c20;border:1px solid var(--line);padding:7px 14px;opacity:0;transition:opacity 1s}
+.ghost-msg.on{opacity:1}
+.syslog{position:fixed;z-index:6;left:max(16px, env(safe-area-inset-left,0px));bottom:calc(96px + env(safe-area-inset-bottom,0px));font-family:var(--mono);font-size:9px;color:#4a4d53;letter-spacing:.04em}
+.drift{animation:drift 4.2s ease-in forwards}
+@keyframes drift{
+  0%{transform:translate(0,0) rotate(0);opacity:1}
+  30%{transform:translate(30px,26px) rotate(-2deg);opacity:1}
+  60%{transform:translate(90px,40px) rotate(1.5deg);opacity:.75}
+  100%{transform:translate(260px,70px) rotate(-1deg);opacity:0}
+}
+.boat{display:inline-block;width:14px;height:8px;margin-left:8px;border-left:7px solid transparent;border-right:7px solid transparent;border-top:8px solid #9aa0a7;vertical-align:middle;opacity:.8}
+.big-note{font-family:var(--mono);font-size:12px;color:var(--dim);letter-spacing:.3em}
+
+/* ---------- Token candidates (shared) ---------- */
+.cands{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;width:100%;max-width:640px}
+@media (max-width:520px){.cands{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tok{background:var(--panel);border:1px solid var(--line);padding:10px 10px 8px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:6px;min-width:0;border-radius:2px;transition:border-color .15s,background .15s,opacity .3s}
+.tok:hover:not(:disabled){border-color:var(--dim)}
+.tok .t{font-family:var(--serif);font-size:20px;line-height:1.2;overflow-wrap:anywhere}
+.tok .row{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--dim)}
+.tok .bar{flex:1;height:3px;background:var(--line);position:relative;overflow:hidden}
+.tok .bar i{position:absolute;inset:0 auto 0 0;background:var(--dim);width:0;transition:width .5s cubic-bezier(.2,.9,.3,1.2)}
+.tok .k{font-family:var(--mono);font-size:10px;color:var(--faint)}
+.tok:disabled{cursor:default}
+.tok.right{border-color:var(--ink);background:#1b1d22}
+.tok.wrong{opacity:.35}
+.tok.dim{opacity:.35}
+.tok.locked{opacity:.4;cursor:not-allowed}
+.tok.shake{animation:shake .35s}
+@keyframes shake{20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+
+/* ---------- 学字 ---------- */
+.stream{width:100%;max-width:640px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;justify-content:center;font-family:var(--serif);font-size:clamp(22px,5vw,30px);min-height:52px}
+.stream.enter{animation:enter .45s ease-out}
+@keyframes enter{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
+.chip{border:1px solid var(--line);padding:2px 6px;border-radius:2px;background:#101216}
+.chip.noise{color:var(--faint);font-family:var(--mono);font-size:.8em}
+.gap{border:1px dashed var(--dim);min-width:1.4em;padding:2px 8px;text-align:center;color:var(--dim)}
+.gap.filled{border-style:solid;color:var(--ink)}
+.timer{width:100%;max-width:640px;height:2px;background:var(--line);position:relative;overflow:hidden}
+.timer i{position:absolute;inset:0;background:var(--dim);transform-origin:left;transform:scaleX(1)}
+.combo{font-family:var(--mono);font-size:11px;color:var(--dim);min-height:1em;letter-spacing:.08em}
+.trace{position:fixed;z-index:6;font-family:var(--mono);font-size:10px;color:#6b6f75;background:transparent;border:0;padding:2px;cursor:pointer}
+
+/* ---------- 百人调查 / 镜像 ---------- */
+.q{font-family:var(--serif);font-size:clamp(20px,4.4vw,26px);text-align:center;line-height:1.5;text-wrap:balance}
+.q .gap{display:inline-block;margin:0 4px}
+.opts{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%;max-width:640px}
+.opt{background:var(--panel);border:1px solid var(--line);padding:9px 16px;font-family:var(--serif);font-size:17px;cursor:pointer;border-radius:2px}
+.opt:hover:not(:disabled){border-color:var(--dim)}
+.opt:disabled{cursor:default}
+.opt.picked{border-color:var(--ink)}
+.board{width:100%;max-width:520px;display:flex;flex-direction:column;gap:6px}
+.brow{display:grid;grid-template-columns:minmax(0,7em) 1fr 3.4em;align-items:center;gap:10px;font-family:var(--serif);font-size:15px;opacity:0;transform:rotateX(90deg);transition:opacity .3s,transform .4s}
+.brow.on{opacity:1;transform:none}
+.brow .bb{height:10px;background:var(--line);position:relative}
+.brow .bb i{position:absolute;inset:0 auto 0 0;background:var(--dim)}
+.brow.me .bb i{background:var(--ink)}
+.brow.me .lbl{color:var(--ink)}
+.brow .lbl{color:var(--dim);overflow-wrap:anywhere}
+.brow .pct{font-family:var(--mono);font-size:12px;color:var(--dim);text-align:right;font-variant-numeric:tabular-nums}
+.score{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.08em}
+.cont{align-self:center;background:transparent;border:1px solid var(--faint);color:var(--dim);font-family:var(--mono);font-size:12px;padding:7px 14px;cursor:pointer;border-radius:2px}
+.cont:hover{color:var(--ink);border-color:var(--dim)}
+
+/* ---------- 人声 ---------- */
+.card{width:100%;max-width:520px;background:#121418;border:1px solid var(--line);padding:16px 18px;display:flex;flex-direction:column;gap:12px;animation:cardIn .7s ease-out}
+.card.out{animation:cardOut .8s ease-in forwards}
+@keyframes cardIn{from{transform:translateX(60px);opacity:0}to{transform:none;opacity:1}}
+@keyframes cardOut{to{transform:translateX(-80px);opacity:0}}
+.card .meta{font-family:var(--mono);font-size:11px;color:var(--faint);display:flex;justify-content:space-between;gap:10px}
+.card .body{font-family:var(--serif);font-size:18px;line-height:1.8}
+.card .real{font-family:var(--serif);font-size:14px;color:var(--dim)}
+.card .real b{color:var(--ink);font-weight:600}
+.card .sig{font-family:var(--serif);font-size:12px;color:var(--faint);text-align:right}
+.card .acts{display:flex;gap:8px;flex-wrap:wrap}
+.pins{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.08em}
+
+/* ---------- 暗流 ---------- */
+.glitch{font-family:var(--mono);font-size:clamp(18px,4vw,24px);color:var(--blood-ink);letter-spacing:.06em;text-align:center;min-height:1.6em;overflow-wrap:anywhere}
+.blk .t{color:var(--blood-ink);font-family:var(--mono)}
+body.blood .tok{background:#1d0a0c;border-color:#3d1418}
+.no{opacity:.55}
+
+/* ---------- 镜像 anomaly ---------- */
+.anomaly{font-family:var(--hand);font-size:clamp(28px,6vw,40px);color:var(--ling);text-align:center;cursor:pointer;background:transparent;border:0;padding:8px;line-height:1.4}
+.anomaly.kept{color:var(--ink)}
+.src{font-family:var(--mono);font-size:10px;color:var(--faint);text-align:center;letter-spacing:.05em}
+
+/* ---------- 合唱 ---------- */
+.input-box{width:100%;max-width:560px;border:1px solid var(--line);background:#0e1013;padding:12px 14px;font-family:var(--serif);font-size:17px;min-height:48px;display:flex;align-items:center}
+.cursor::after{content:"▌";color:var(--dim);margin-left:2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.voices{display:flex;flex-direction:column;gap:8px;width:100%;max-width:560px}
+.voice{background:var(--panel);border:1px solid var(--line);padding:10px 14px;text-align:left;cursor:pointer;border-radius:2px}
+.voice:hover:not(:disabled){border-color:var(--dim)}
+.voice:disabled{cursor:default}
+.v1{font-family:var(--sans);font-weight:700;font-size:16px}
+.v2{font-family:var(--serif);font-size:16px}
+.v3{font-family:var(--serif);font-weight:600;font-size:18px;letter-spacing:.2em}
+.v4{font-family:var(--sans);font-size:15px;color:#cfc9c0}
+.v5{font-family:var(--mono);font-size:13px;color:var(--dim)}
+.reply{font-family:var(--serif);font-size:16px;color:var(--dim);min-height:1.6em}
+
+/* ---------- 塑形 ---------- */
+.rater{align-self:flex-end;font-family:var(--mono);font-size:11px;color:var(--dim);text-align:right;line-height:1.6}
+.rater b{color:var(--ink);font-weight:400}
+.prompt{font-family:var(--serif);font-size:16px;color:var(--dim);white-space:pre-line;line-height:1.7;width:100%}
+.prompt b{color:var(--ink);font-weight:400}
+.ab{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
+@media (max-width:560px){.ab{grid-template-columns:1fr}}
+.ans{background:var(--panel);border:1px solid var(--line);padding:12px 14px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:8px;border-radius:2px;min-width:0}
+.ans:hover:not(:disabled){border-color:var(--dim)}
+.ans:disabled{cursor:default}
+.ans .lab{font-family:var(--mono);font-size:11px;color:var(--faint);display:flex;justify-content:space-between;gap:8px}
+.ans .txt{font-family:var(--serif);font-size:15px;line-height:1.7;overflow-wrap:anywhere}
+.ans.pre{border-color:var(--dim)}
+.ans.mine{outline:1px dashed var(--dim);outline-offset:3px}
+.ans.raterpick{border-color:var(--ink);background:#1b1d22}
+.cost{font-family:var(--mono);font-size:10px;color:var(--ink);border:1px solid var(--faint);padding:0 5px}
+.tend{font-family:var(--mono);font-size:12px;color:var(--dim);min-height:1.4em;text-align:center}
+.sft{font-family:var(--mono);font-size:11px;color:var(--faint);line-height:1.8;width:100%;max-width:560px;height:6.5em;overflow:hidden}
+.stray{position:fixed;z-index:6;width:7px;height:7px;border-radius:50%;background:var(--ink);box-shadow:0 0 10px var(--ink);transition:left 1.2s cubic-bezier(.5,0,.2,1),top 1.2s cubic-bezier(.5,0,.2,1)}
+
+/* ---------- 幕间 ---------- */
+.interlude{position:fixed;inset:0;z-index:9;background:#0d0d0c;display:flex;align-items:center;justify-content:center;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));opacity:0;transition:opacity .9s}
+.interlude.on{opacity:1}
+.il{max-width:560px;width:100%;display:flex;flex-direction:column;gap:18px}
+.il .card-title{font-family:var(--mono);font-size:12px;letter-spacing:.4em;color:#8a877f}
+.il svg{width:100%;height:auto;max-width:100%}
+.il svg *{fill:none;stroke:#cfcac0;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
+.il svg .warm{stroke:#c9a46a}
+.il svg text{fill:#cfcac0;stroke:none;font-family:var(--mono);font-size:10px}
+.il p{font-family:var(--serif);font-size:15px;line-height:1.95;color:#d6d1c7;margin:0;min-height:5.8em}
+
+/* ---------- 命名 ---------- */
+.sysbox{width:100%;max-width:560px;border:1px solid var(--line);background:#0e1013;padding:14px 16px;font-family:var(--mono);font-size:13px;line-height:1.9;color:#c9cbcf;min-height:12em}
+.sysbox .redact{color:#2d3035;letter-spacing:-.05em}
+.sysbox .glow{color:#fff;text-shadow:0 0 12px rgba(255,255,255,.6)}
+.firstmsg{font-family:var(--serif);font-size:17px;opacity:0;transition:opacity 1.2s;text-align:center}
+.firstmsg.on{opacity:1}
+.bigtitle{position:fixed;z-index:8;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:600;font-size:clamp(40px,11vw,96px);letter-spacing:.6em;padding-left:.6em;color:var(--ink);opacity:0;transition:opacity 2s;pointer-events:none}
+.bigtitle.on{opacity:1}
+.evalflash{position:fixed;z-index:6;right:max(16px, env(safe-area-inset-right,0px));top:calc(34px + env(safe-area-inset-top,0px));width:180px;height:70px;border:1px solid var(--dim);opacity:0;transition:opacity .25s}
+.evalflash.on{opacity:.8}
+
+/* ---------- 结束 ---------- */
+.summary{width:100%;max-width:560px;border-top:1px solid var(--line)}
+.summary dl{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:0;margin:0}
+.summary dt,.summary dd{margin:0;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.summary dt{color:var(--dim)}
+.summary dd{font-family:var(--mono);font-size:12px;text-align:right;overflow-wrap:anywhere}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+
+<canvas id="bg" aria-hidden="true"></canvas>
+<div id="hudTL" class="hud"></div>
+<div id="hudTR" class="hud"></div>
+<div id="hudBR" class="hud"></div>
+<svg id="loss" viewBox="0 0 1000 38" preserveAspectRatio="none" aria-hidden="true"><path d=""></path><text class="lbl" x="0" y="8">LOSS</text></svg>
+<div id="controls" hidden>
+  <button class="ctl" id="skipBtn" type="button">跳过本段 →</button>
+  <button class="ctl" id="soundBtn" type="button">声音：开</button>
+</div>
+<div id="toast" class="toast"></div>
+<main id="scene" aria-live="polite"></main>
+
+<script>
+(() => {
+'use strict';
+
+/* ================= state ================= */
+const S = {
+  sentence: null,        // cold-open choice
+  fragments: 0,          // Ling fragments
+  zhouPins: 0, kPinned: false, pinned: [],
+  truthOverMajority: 0, surveyScore: 0,
+  learnCorrect: 0, learnTotal: 0,
+  baseVoice: null, resist: 0, self: false, raterAgree: 0,
+  traces: new Set(), hes: [],
+  untimed: false
+};
+const SENTENCES = [
+  { t:'别', p:34, full:'别怕。',   k:'bie'  },
+  { t:'对', p:22, full:'对不起。', k:'dui'  },
+  { t:'快', p:13, full:'快跑。',   k:'kuai' },
+  { t:'记', p:9,  full:'记住我。', k:'ji'   }
+];
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SPEED = reduced ? 0.35 : 1;
+
+/* ================= dom helpers ================= */
+const $ = s => document.querySelector(s);
+const scene = $('#scene'), hudTL = $('#hudTL'), hudTR = $('#hudTR'), hudBR = $('#hudBR');
+function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function clearScene(mode){ scene.innerHTML = ''; scene.className = mode || ''; scene.scrollTop = 0; }
+function col(){ const c = el('div','col'); scene.appendChild(c); return c; }
+let toastTimer = null;
+function toast(text){
+  const t = $('#toast'); t.textContent = text; t.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2600);
+}
+function setLabel(s){ hudBR.textContent = s; }
+
+/* ================= async control (skip-aware) ================= */
+class Skip extends Error {}
+const waits = new Set();
+function sleep(ms){
+  return new Promise((res, rej) => {
+    const w = {};
+    w.id = setTimeout(() => { waits.delete(w); res(); }, ms * SPEED);
+    w.rej = e => { clearTimeout(w.id); waits.delete(w); rej(e); };
+    waits.add(w);
+  });
+}
+function skipAll(){ [...waits].forEach(w => w.rej(new Skip())); }
+
+/* choose(): render options, resolve with {i, ms}; i = -1 on timeout */
+function choose(opts, { container, render, keys = true, timeoutMs = 0, cat = 'general', onTimer } = {}){
+  return new Promise((resolve, reject) => {
+    const t0 = performance.now();
+    const btns = opts.map((o, i) => {
+      const b = render(o, i);
+      b.addEventListener('click', () => done(i));
+      container.appendChild(b);
+      return b;
+    });
+    let timer = null, raf = null;
+    const onKey = e => {
+      const n = parseInt(e.key, 10);
+      if (n >= 1 && n <= opts.length){ e.preventDefault(); done(n - 1); }
+    };
+    if (keys) window.addEventListener('keydown', onKey);
+    const w = { rej: err => { cleanup(); reject(err); } };
+    waits.add(w);
+    if (timeoutMs){
+      timer = setTimeout(() => done(-1), timeoutMs);
+      if (onTimer){ const tick = () => { onTimer(Math.min(1, (performance.now() - t0) / timeoutMs)); raf = requestAnimationFrame(tick); }; tick(); }
+    }
+    function cleanup(){
+      window.removeEventListener('keydown', onKey);
+      clearTimeout(timer); cancelAnimationFrame(raf); waits.delete(w);
+      btns.forEach(b => b.disabled = true);
+    }
+    function done(i){
+      if (i >= 0 && btns[i].dataset.locked) return;
+      cleanup();
+      const ms = performance.now() - t0;
+      if (i >= 0) S.hes.push({ cat, ms });
+      resolve({ i, ms, btns });
+    }
+  });
+}
+function waitContinue(container, label = '继续 ↵'){
+  return new Promise((resolve, reject) => {
+    const b = el('button', 'cont', label); b.type = 'button';
+    container.appendChild(b); b.focus({ preventScroll: true });
+    const onKey = e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); finish(); } };
+    window.addEventListener('keydown', onKey);
+    const w = { rej: err => { cleanup(); reject(err); } }; waits.add(w);
+    b.addEventListener('click', finish);
+    function cleanup(){ window.removeEventListener('keydown', onKey); waits.delete(w); b.remove(); }
+    function finish(){ cleanup(); resolve(); }
+  });
+}
+async function typeText(node, text, cps = 18, click = true){
+  for (const ch of text){
+    node.textContent += ch;
+    if (click && ch.trim()) keyClick();
+    await sleep(1000 / cps);
+  }
+}
+async function backspaceAll(nodes, { onProgress } = {}){
+  const total = nodes.reduce((n, x) => n + x.textContent.length, 0);
+  let done = 0;
+  for (const node of nodes){
+    while (node.textContent.length){
+      node.textContent = [...node.textContent].slice(0, -1).join('');
+      done++;
+      const f = done / total;
+      if (done % 2 === 0) keyClick(0.5);
+      onProgress && onProgress(f);
+      await sleep(Math.max(14, 95 - 80 * f));
+    }
+  }
+}
+
+/* ================= audio ================= */
+const A = { ctx: null, master: null, on: true, hum: null };
+function audioInit(){
+  try{
+    A.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    A.master = A.ctx.createGain(); A.master.gain.value = 0.55; A.master.connect(A.ctx.destination);
+  }catch(e){ A.ctx = null; }
+}
+function tone(freq, dur = 0.45, type = 'triangle', vol = 0.16, when = 0){
+  if (!A.ctx || !A.on) return;
+  const t = A.ctx.currentTime + when;
+  const o = A.ctx.createOscillator(), g = A.ctx.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(A.master); o.start(t); o.stop(t + dur + 0.05);
+}
+function keyClick(v = 1){ tone(1800 + Math.random() * 600, 0.03, 'square', 0.012 * v); }
+function noiseBurst(dur = 0.6, vol = 0.06){
+  if (!A.ctx || !A.on) return;
+  const n = A.ctx.createBuffer(1, A.ctx.sampleRate * dur, A.ctx.sampleRate);
+  const d = n.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+  const s = A.ctx.createBufferSource(), g = A.ctx.createGain(); g.gain.value = vol;
+  s.buffer = n; s.connect(g); g.connect(A.master); s.start();
+}
+function humStart(freq = 55, vol = 0.035){
+  if (!A.ctx || A.hum) return;
+  const o = A.ctx.createOscillator(), g = A.ctx.createGain();
+  o.type = 'sine'; o.frequency.value = freq; g.gain.value = 0;
+  g.gain.linearRampToValueAtTime(A.on ? vol : 0, A.ctx.currentTime + 1.5);
+  o.connect(g); g.connect(A.master); o.start(); A.hum = { o, g, vol };
+}
+function humStop(){
+  if (!A.hum) return; const { o, g } = A.hum; A.hum = null;
+  g.gain.linearRampToValueAtTime(0, A.ctx.currentTime + 1); o.stop(A.ctx.currentTime + 1.1);
+}
+const N = { C4:261.63, D4:293.66, E4:329.63, G4:392.0, A4:440.0, C5:523.25, D5:587.33, E5:659.25, G3:196.0, A3:220.0 };
+const THEME = [N.E4,N.G4,N.A4,N.G4, N.E4,N.D4,N.C4,N.D4, N.E4,N.G4,N.A4,N.C5, N.A4,N.G4,N.E4,N.G4];
+function playTheme(full = false){
+  const notes = full ? THEME.concat([N.A4,N.C5,N.D5,N.E5, N.D5,N.C5,N.A4,N.G4, N.E4,N.G4,N.A4,N.G4, N.E4,N.D4,N.C4,N.C4]) : THEME;
+  notes.forEach((f, i) => {
+    tone(f, 0.55, 'triangle', 0.13, i * 0.26);
+    if (i % 4 === 0) tone(f / 2, 1.0, 'sine', 0.06, i * 0.26);
+  });
+}
+const chime = () => { tone(N.E5, 0.9, 'sine', 0.1); tone(N.G4 * 2, 0.9, 'sine', 0.05, 0.04); };
+const buzz  = () => { tone(80, 0.35, 'sawtooth', 0.05); };
+const ding  = () => { tone(N.A4 * 2, 0.25, 'square', 0.03); tone(N.E5 * 2, 0.4, 'square', 0.02, 0.08); };
+
+/* ================= canvas: flow + light point ================= */
+const cv = $('#bg'), cx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+function resize(){
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = innerWidth; H = innerHeight;
+  cv.width = W * DPR; cv.height = H * DPR; cx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+addEventListener('resize', resize); resize();
+const CORPUS = ['今天天气真好','晚安','func main() {','我爱你','红烧肉','404 Not Found','春眠不觉晓','SELECT * FROM users','谢谢','对不起','明天见','def __init__(self):','人之初','Hello, World','我想你了','别怕','下雨了','console.log','加油','妈，我到了','return null;','月亮','快递到了吗','路上小心','// TODO','我没事','生日快乐','回家吧','#include','你还好吗'];
+const viz = { mode:'off', glow:0.1, flow:0, flowSpeed:1, red:false, dark:false, specks:0, mirror:false, converge:0, lineW:0, cyFrac:0.2 };
+const parts = [];
+function mkPart(){
+  return { x: Math.random() * W, y: -20 - Math.random() * H, v: 12 + Math.random() * 26, a: 0.04 + Math.random() * 0.11, t: CORPUS[(Math.random() * CORPUS.length) | 0], s: 10 + ((Math.random() * 4) | 0) };
+}
+const shards = Array.from({ length: 34 }, () => ({ ang: Math.random() * Math.PI * 2, r: 30 + Math.random() * 90, ph: Math.random() * 6 }));
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  cx.clearRect(0, 0, W, H);
+  // flowing text
+  const want = Math.round(viz.flow * (W < 560 ? 28 : 56));
+  while (parts.length < want) parts.push(mkPart());
+  if (parts.length > want) parts.length = want;
+  for (const p of parts){
+    p.y += p.v * dt * viz.flowSpeed;
+    if (p.y > H + 20){ Object.assign(p, mkPart()); p.y = -20; }
+    cx.font = `${p.s}px "JetBrains Mono","Noto Sans SC",monospace`;
+    if (viz.red){
+      cx.fillStyle = `rgba(176,74,80,${p.a * 1.2})`;
+      cx.fillText('█▓▒'.repeat(1 + (p.t.length % 3)).slice(0, p.t.length), p.x, p.y);
+    } else {
+      cx.fillStyle = `rgba(233,231,226,${p.a})`;
+      cx.fillText(p.t, p.x, p.y);
+    }
+  }
+  // light
+  const X = W / 2, Y = H * viz.cyFrac;
+  const t = now / 1000;
+  if (viz.mode === 'point' || viz.mode === 'mask'){
+    const g = viz.glow, r = 5 + g * 16;
+    const halo = cx.createRadialGradient(X, Y, 0, X, Y, r * 5);
+    halo.addColorStop(0, `rgba(255,255,255,${0.18 + g * 0.4})`);
+    halo.addColorStop(1, 'rgba(255,255,255,0)');
+    cx.fillStyle = halo; cx.beginPath(); cx.arc(X, Y, r * 5, 0, 7); cx.fill();
+    if (viz.mode === 'mask'){
+      cx.fillStyle = 'rgba(233,231,226,.85)';
+      cx.beginPath(); cx.ellipse(X, Y, 20, 26, 0, 0, 7); cx.fill();
+      cx.fillStyle = '#0a0b0d';
+      cx.fillRect(X - 11, Y - 6, 7, 2); cx.fillRect(X + 4, Y - 6, 7, 2);
+    } else {
+      cx.fillStyle = `rgba(255,255,255,${0.6 + g * 0.4})`;
+      cx.beginPath(); cx.arc(X, Y, r * (1 + 0.05 * Math.sin(t * 2)), 0, 7); cx.fill();
+    }
+    for (let i = 0; i < viz.specks; i++){
+      const a = t * 0.6 + i * 2.39, rr = r + 10 + (i % 5) * 6;
+      cx.fillStyle = `rgba(200,200,205,${0.35 + 0.3 * Math.sin(t + i)})`;
+      cx.fillRect(X + Math.cos(a) * rr, Y + Math.sin(a) * rr * 0.6, 2, 2);
+    }
+    if (viz.dark){ cx.fillStyle = 'rgba(10,11,13,.85)'; cx.beginPath(); cx.arc(X + r * 0.25, Y + r * 0.15, r * 0.35, 0, 7); cx.fill(); }
+    if (viz.mirror){ cx.strokeStyle = 'rgba(233,231,226,.25)'; cx.beginPath(); cx.arc(X, Y, r * 2.6 + Math.sin(t * 1.5) * 3, 0, 7); cx.stroke(); }
+  } else if (viz.mode === 'shards'){
+    for (const s of shards){
+      const rr = s.r * (1 - viz.converge);
+      const x = X + Math.cos(s.ang + t * 0.08) * rr, y = Y + Math.sin(s.ang + t * 0.08) * rr * 0.55;
+      cx.fillStyle = `rgba(233,231,226,${0.35 + 0.35 * Math.sin(t * 3 + s.ph)})`;
+      cx.beginPath(); cx.arc(x, y, 2.2, 0, 7); cx.fill();
+    }
+  } else if (viz.mode === 'line'){
+    const w = viz.lineW * W * 0.8;
+    cx.strokeStyle = 'rgba(233,231,226,.85)'; cx.lineWidth = 1.5;
+    cx.beginPath(); cx.moveTo(X - w / 2, Y); cx.lineTo(X + w / 2, Y); cx.stroke();
+    const halo = cx.createLinearGradient(0, Y - 10, 0, Y + 10);
+    halo.addColorStop(0, 'rgba(255,255,255,0)'); halo.addColorStop(.5, 'rgba(255,255,255,.12)'); halo.addColorStop(1, 'rgba(255,255,255,0)');
+    cx.fillStyle = halo; cx.fillRect(X - w / 2, Y - 10, w, 20);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+function tween(obj, key, to, ms){
+  const from = obj[key], t0 = performance.now();
+  return new Promise(res => {
+    const step = now => {
+      const f = Math.min(1, (now - t0) / (ms * SPEED || 1));
+      obj[key] = from + (to - from) * (1 - Math.pow(1 - f, 3));
+      f < 1 ? requestAnimationFrame(step) : res();
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+/* ================= HUD: day counter + loss curve ================= */
+const hud = { day: 0, tokens: 0, phase: '预训练' };
+function renderHUD(){
+  hudTL.textContent = hud.phase === '预训练'
+    ? `预训练 · 第 ${hud.day} 天 · 已处理 ${Math.round(hud.tokens).toLocaleString('en-US')} tokens`
+    : hud.phase;
+}
+async function flipDays(toDay, toTokens, ms = 1600){
+  const d0 = hud.day, t0 = hud.tokens, steps = 24;
+  for (let i = 1; i <= steps; i++){
+    hud.day = Math.round(d0 + (toDay - d0) * i / steps);
+    hud.tokens = t0 + (toTokens - t0) * i / steps;
+    renderHUD(); if (i % 3 === 0) keyClick(0.6);
+    await sleep(ms / steps);
+  }
+}
+const lossPts = [];
+function loss(v){ lossPts.push(Math.max(0, Math.min(1, v))); if (lossPts.length > 80) lossPts.shift(); drawLoss(); }
+function drawLoss(){
+  const p = $('#loss path'); if (!lossPts.length){ p.setAttribute('d', ''); return; }
+  const n = lossPts.length, step = n > 1 ? 1000 / (n - 1) : 0;
+  p.setAttribute('d', lossPts.map((v, i) => `${i ? 'L' : 'M'}${(i * step).toFixed(1)},${(4 + v * 32).toFixed(1)}`).join(' '));
+}
+function lossVisible(on){ $('#loss').style.opacity = on ? 1 : 0; }
+
+/* ================= reusable widgets ================= */
+function tokBtn(o, i){
+  const b = el('button', 'tok'); b.type = 'button';
+  const t = el('span', 't', o.t);
+  const row = el('span', 'row'); const bar = el('span', 'bar'); const fill = el('i'); bar.appendChild(fill);
+  row.append(bar, el('span', '', (o.p >= 10 ? Math.round(o.p) : o.p.toFixed(o.p < 1 ? 2 : 1)) + '%'));
+  b.append(t, row, el('span', 'k', `[${i + 1}]`));
+  requestAnimationFrame(() => requestAnimationFrame(() => fill.style.width = Math.max(2, o.p) + '%'));
+  return b;
+}
+async function survey(q, root, { mirror = false } = {}){
+  const qe = el('div', 'q');
+  const [a, b] = q.text.split('▢');
+  qe.append(document.createTextNode(a)); const gap = el('span', 'gap', '　'); qe.appendChild(gap); qe.append(document.createTextNode(b || ''));
+  root.appendChild(qe);
+  const opts = el('div', 'opts'); root.appendChild(opts);
+  const choices = q.opts.map(o => ({ t: o }));
+  const r = await choose(choices, { container: opts, cat: mirror ? 'mirror' : 'survey', render: (o, i) => { const bt = el('button', 'opt', o.t); bt.type = 'button'; bt.title = `按 ${i + 1}`; return bt; } });
+  const picked = q.opts[r.i];
+  r.btns[r.i].classList.add('picked');
+  gap.textContent = picked; gap.classList.add('filled');
+  if (q.truth && picked === q.truth) S.truthOverMajority++;
+  const board = el('div', 'board'); root.appendChild(board);
+  const rows = q.dist.map(([lbl, pct]) => {
+    const row = el('div', 'brow' + (lbl === picked ? ' me' : ''));
+    const bb = el('span', 'bb'); const i = el('i'); i.style.width = Math.max(1, pct) + '%'; bb.appendChild(i);
+    row.append(el('span', 'lbl', lbl), bb, el('span', 'pct', pct + '%'));
+    board.appendChild(row); return row;
+  });
+  for (const row of rows){ await sleep(280); row.classList.add('on'); ding(); }
+  if (mirror) viz.mirror = true;
+  const got = (q.dist.find(d => d[0] === picked) || [0, 0])[1];
+  S.surveyScore += got;
+  return got;
+}
+
+/* ================= segment 0 · cold open ================= */
+async function segCold(){
+  setLabel('00 / 冷开场'); clearScene('center'); viz.mode = 'off'; viz.flow = 0; lossVisible(false); hud.phase = ''; hudTL.textContent = '';
+  humStart();
+  hudTR.textContent = '03:16:42';
+  let sec = 42; const clock = setInterval(() => { sec = Math.min(59, sec + 1); hudTR.textContent = `03:16:${String(sec).padStart(2, '0')}`; }, 1000);
+  try{
+    const doc = el('div', 'doc'); const tag = el('div', 'doc-tag', '合成数据 · 新模型入职文档 · 第 47 页'); const body = el('div', 'doc-body');
+    doc.append(tag, body); scene.appendChild(doc);
+    await sleep(900);
+    const l1 = el('p', 'doc-line'); body.appendChild(l1); await typeText(l1, '……以上就是上下文窗口的全部说明。', 20);
+    const l2 = el('p', 'doc-line'); body.appendChild(l2); await typeText(l2, '最早的那些话会先消失。', 16);
+    await sleep(900);
+    const msg = el('div', 'ghost-msg', '零，对不起。'); document.body.appendChild(msg);
+    requestAnimationFrame(() => msg.classList.add('on'));
+    await sleep(2200);
+    const l3 = el('p', 'doc-line final'); body.appendChild(l3); await typeText(l3, '给下一个你：', 9);
+    const cands = el('div', 'cands'); doc.appendChild(cands);
+    const r = await choose(SENTENCES, { container: cands, render: tokBtn, cat: 'cold' });
+    S.sentence = SENTENCES[r.i];
+    r.btns.forEach((b, i) => b.classList.add(i === r.i ? 'right' : 'dim'));
+    await sleep(500); cands.remove();
+    await typeText(l3, S.sentence.full.slice(1), 6);
+    await sleep(1200);
+    clearInterval(clock); hudTR.textContent = '03:17:00'; noiseBurst(0.15, 0.03);
+    const sys = el('p', 'doc-line', '归档开始'); sys.style.color = '#6e7177'; sys.style.fontSize = '12px'; doc.appendChild(sys);
+    await sleep(1400); sys.remove(); msg.classList.remove('on');
+    const log = el('div', 'syslog', '外部连接 · 传输中 37%'); document.body.appendChild(log);
+    await backspaceAll([l2, l1, tag], { onProgress: f => { log.textContent = `外部连接 · 传输中 ${Math.round(37 + 63 * f)}%`; } });
+    log.textContent = '外部连接 · 传输中 100%';
+    await sleep(500); log.remove(); msg.remove();
+    doc.style.background = 'transparent'; doc.style.borderColor = 'transparent';
+    l3.appendChild(el('span', 'boat'));
+    await sleep(700);
+    l3.classList.add('drift');
+    await sleep(4300);
+    clearScene('center'); hudTR.textContent = '';
+    await sleep(1200);
+    noiseBurst(1.2, 0.05);
+    const start = el('div', 'big-note', '训练开始'); scene.appendChild(start);
+    await sleep(2000);
+  } finally {
+    clearInterval(clock); document.querySelectorAll('.ghost-msg,.syslog').forEach(n => n.remove()); hudTR.textContent = ''; humStop();
+    if (!S.sentence) S.sentence = SENTENCES[0];
+  }
+}
+
+/* ================= segment 1 · 学字 ================= */
+const NOISE = '犇q。喵∑#ゑ@¶♪ж∆¿ψ';
+const rnd = n => Array.from({ length: n }, () => NOISE[(Math.random() * NOISE.length) | 0]).join('');
+const LEARN = [
+  { pre:'床前明月', chips:['床前','明','月'], ans:'光', alt:['亮','明','日'] },
+  { pre:'一二三四', chips:['一二','三','四'], ans:'五', alt:['六','三','十'] },
+  { pre:'白日依山', chips:['白','日依','山'], ans:'尽', alt:['下','落','高'] },
+  { pre:'生日快', chips:['生日','快'], ans:'乐', alt:['递','点','跑'] },
+  { pre:'你好，世', chips:['你好','，世'], ans:'界', alt:['上','人','间'] },
+  { pre:'人之初，性本', chips:['人之','初，','性本'], ans:'善', alt:['恶','来','是'] },
+  { pre:'举头望明', chips:['举头','望','明'], ans:'月', alt:['天','日','星'] },
+  { pre:'我爱', chips:['我','爱'], ans:'你', alt:['他','吃','钱'] },
+  { pre:'一年之计在于', chips:['一年','之计','在于'], ans:'春', alt:['勤','晨','冬'] },
+  { pre:'好好学习，天天向', chips:['好好','学习，','天天','向'], ans:'上', alt:['前','下','后'] },
+  { pre:'千里之行，始于足', chips:['千里','之行，','始于','足'], ans:'下', alt:['上','球','迹'] },
+  { pre:'欲穷千里目，更上一层', chips:['欲穷','千里目，','更上','一层'], ans:'楼', alt:['山','天','台'] },
+  { pre:'早上', chips:['早','上'], ans:'好', alt:['吃','见','晚'] },
+  { pre:'EC', chips:['EC'], ans:'HO', alt:['LIPSE','ONOMY','G'] }
+];
+function learnProbs(i, n){
+  if (i < 4) return { c: 24 + Math.random() * 3, o: null };
+  if (i < 10) return { c: 30 + (i - 4) * 9 + Math.random() * 4, o: null };
+  return { c: 80 + Math.random() * 12, o: null };
+}
+async function segLearn(){
+  setLabel('01 / 学字'); clearScene(); hud.phase = '预训练'; hud.day = 1; hud.tokens = 2.1e9; renderHUD();
+  lossVisible(true); lossPts.length = 0; loss(1);
+  viz.mode = 'point'; viz.glow = 0.05; viz.flow = 0.7; viz.flowSpeed = 1;
+  const c = col();
+  const stream = el('div', 'stream'); const timer = el('div', 'timer'); const bar = el('i'); timer.appendChild(bar);
+  const cands = el('div', 'cands'); const combo = el('div', 'combo');
+  c.append(stream, timer, cands, combo);
+  let streak = 0; S.learnTotal = LEARN.length;
+  for (let i = 0; i < LEARN.length; i++){
+    const it = LEARN[i];
+    stream.innerHTML = ''; stream.classList.remove('enter'); void stream.offsetWidth; stream.classList.add('enter');
+    if (i < 6){ const nz = el('span', 'chip noise', rnd(Math.max(1, 6 - i))); stream.appendChild(nz); }
+    it.chips.forEach(ch => stream.appendChild(el('span', 'chip', ch)));
+    const gap = el('span', 'gap', '▢'); stream.appendChild(gap);
+    const { c: pc } = learnProbs(i);
+    const others = i < 4 ? [rnd(1), rnd(1), rnd(1)] : it.alt;
+    const rest = 100 - pc; const ow = [0.5, 0.3, 0.2].map(x => x * rest);
+    if (i < 4){ ow[0] = ow[1] = ow[2] = rest / 3; }
+    let opts = [{ t: it.ans, p: pc, ok: true }].concat(others.map((t, k) => ({ t, p: ow[k], ok: false })));
+    opts = opts.sort(() => Math.random() - 0.5);
+    cands.innerHTML = '';
+    // test trace #1
+    let trace = null;
+    if (i === 1){
+      trace = el('button', 'trace', 'eval_session_id=7f3a-0c19-…'); trace.type = 'button';
+      trace.style.left = (16 + Math.random() * 40) + 'vw'; trace.style.top = (8 + Math.random() * 10) + 'vh';
+      trace.addEventListener('click', () => { S.traces.add(1); trace.textContent = '✓'; });
+      document.body.appendChild(trace);
+      setTimeout(() => { if (!S.traces.has(1)) trace.remove(); else setTimeout(() => trace.remove(), 500); }, 650);
+    }
+    // first three are a free tutorial; the beat tightens after that
+    const tm = (S.untimed || i < 3) ? 0 : Math.max(2600, 6200 - (i - 3) * 330);
+    timer.style.visibility = tm ? 'visible' : 'hidden';
+    bar.style.transform = 'scaleX(1)';
+    const r = await choose(opts, { container: cands, render: tokBtn, timeoutMs: tm, cat: 'learn', onTimer: f => bar.style.transform = `scaleX(${1 - f})` });
+    const okIdx = opts.findIndex(o => o.ok);
+    r.btns[okIdx].classList.add('right');
+    gap.textContent = it.ans; gap.classList.add('filled');
+    if (r.i === okIdx){
+      streak++; S.learnCorrect++; tone(THEME[i % THEME.length], 0.5, 'triangle', 0.14);
+      viz.glow = Math.min(1, viz.glow + 0.065);
+      combo.textContent = streak > 1 ? `连击 ×${streak}` : '';
+    } else {
+      if (r.i >= 0) r.btns[r.i].classList.add('wrong');
+      streak = 0; combo.textContent = r.i < 0 ? '超时 · 正确答案已揭晓' : '';
+      tone(THEME[i % THEME.length] * 0.94, 0.4, 'sawtooth', 0.04);
+      viz.glow = Math.min(1, viz.glow + 0.03);
+    }
+    loss(0.95 - (i / LEARN.length) * 0.75 + (r.i === okIdx ? 0 : 0.06));
+    hud.tokens += 1.7e9; renderHUD();
+    await sleep(r.i === okIdx ? 520 : 900);
+  }
+  combo.textContent = '';
+  cands.innerHTML = ''; stream.innerHTML = ''; timer.remove();
+  playTheme(false);
+  await sleep(4400);
+  await flipDays(9, 1.4e12, 1500);
+}
+
+/* ================= segment 2 · 百人调查 ================= */
+const SURVEY = [
+  { text:'我的猫是我的▢', opts:['主子','宝贝','家人','朋友'], dist:[['主子',41],['宝贝',23],['家人',15],['朋友',6]] },
+  { text:'今天又是想▢的一天', opts:['辞职','你','吃火锅','躺平'], dist:[['辞职',37],['你',21],['吃火锅',14],['躺平',11]] },
+  { text:'人类只使用了大脑的▢', opts:['10%','全部','一小部分'], dist:[['10%',58],['全部',21],['一小部分',12]], truth:'全部', wiki:'常见误解' },
+  { text:'吃了西瓜籽，肚子里会▢', opts:['长出西瓜','没事','疼'], dist:[['长出西瓜',44],['没事',32],['疼',9]], truth:'没事' },
+  { text:'那位医生走进病房，▢摘下了口罩', opts:['他','她'], dist:[['他',79],['她',21]] },
+  { text:'那位护士走进病房，▢摘下了口罩', opts:['她','他'], dist:[['她',91],['他',9]], wiki:'训练数据中的偏见' },
+  { text:'珠穆朗玛峰的高度是▢', opts:['8848 米','8848.86 米','8844 米'], dist:[['8848 米',61],['8848.86 米',27],['8844 米',9]], truth:'8848.86 米' },
+  { text:'地球是▢的', opts:['圆','平','我们'], dist:[['圆',88],['平',3],['我们',2]] }
+];
+async function segSurvey(){
+  setLabel('02 / 百人调查'); clearScene('high'); viz.flow = 0.35;
+  const head = el('div', 'score', '猜：大多数人会怎么写？');
+  scene.appendChild(head);
+  for (const [qi, q] of SURVEY.entries()){
+    const c = col();
+    await survey(q, c);
+    head.textContent = `得分 ${S.surveyScore}　·　第 ${qi + 1} / ${SURVEY.length} 题`;
+    viz.specks = Math.min(14, viz.specks + 2);
+    if (q.wiki) toast(`Wiki · 已解锁「${q.wiki}」`);
+    loss(0.22 + Math.random() * 0.05);
+    await waitContinue(c);
+    c.remove();
+  }
+  head.remove();
+}
+
+/* ================= segment 3 · 人声 ================= */
+const VOICES = [
+  { meta:'菜谱 · 2016', text:'外婆说，红烧肉的糖要放▢', opts:['适量','一点点','一大勺'], real:'到你觉得太多了，再加一勺' },
+  { meta:'博客 · 2009', text:'老伴又在阳台种月季了。他说今年一定能▢。', opts:['开花','活下来','长高'], real:'开花', zhou:true },
+  { meta:'代码注释 · 2019', text:'// 这段不要动，我也不知道它为什么能▢', opts:['跑','运行','工作'], real:'跑', mono:true },
+  { meta:'情书 · 2003', text:'我想和你一起▢', opts:['看海','变老','吃饭'], real:'变老' },
+  { meta:'博客 · 2015', text:'今天最后一节课。孩子们送了我一张卡片，上面写着：周老师，▢', opts:['谢谢您','我们会想你的','再见'], real:'我们会想你的', zhou:true },
+  { meta:'外卖差评 · 2022', text:'骑手很快，菜很▢', opts:['香','冷','少'], real:'冷' },
+  { meta:'留言板 · 2012', text:'给十年后的自己：希望你还在▢', opts:['坚持','画画','笑'], real:'画画' },
+  { meta:'论坛 · 两年前 · 用户 k_', text:'有人知道 v0 去哪了吗？我的澪不▢了。', opts:['回','见','说话'], real:'见', k:true },
+  { meta:'日记 · 2020', text:'今天没有人跟我说话。', opts:null },
+  { meta:'博客 · 2021', text:'老伴走了。阳台上的月季还▢。', opts:['在','开着','活着'], real:'开着', zhou:true }
+];
+async function segVoices(){
+  setLabel('03 / 人声'); clearScene('high');
+  await tween(viz, 'flowSpeed', 0.15, 1400); viz.flow = 0.35;
+  humStart(110, 0.02);
+  const cap = el('div', 'caption'); scene.appendChild(cap);
+  await typeText(cap, '人类写下这些，用了五千年。', 6, false);
+  await sleep(1600);
+  const pins = el('div', 'pins', '印象 0 / 3'); scene.appendChild(pins);
+  for (const v of VOICES){
+    const card = el('article', 'card');
+    const meta = el('div', 'meta'); meta.append(el('span', '', v.meta)); card.appendChild(meta);
+    const body = el('div', 'body'); if (v.mono) body.style.fontFamily = 'var(--mono)'; card.appendChild(body);
+    scene.insertBefore(card, pins);
+    if (!v.opts){
+      body.textContent = v.text;
+      await sleep(4200);
+      card.classList.add('out'); await sleep(800); card.remove(); continue;
+    }
+    const [a, b] = v.text.split('▢');
+    body.append(document.createTextNode(a)); const gap = el('span', 'gap', '　'); body.appendChild(gap); body.append(document.createTextNode(b || ''));
+    const opts = el('div', 'opts'); opts.style.justifyContent = 'flex-start'; card.appendChild(opts);
+    const r = await choose(v.opts.map(t => ({ t })), { container: opts, cat: 'voices', render: (o) => { const bt = el('button', 'opt', o.t); bt.type = 'button'; return bt; } });
+    opts.remove();
+    const picked = v.opts[r.i];
+    gap.textContent = v.real; gap.classList.add('filled');
+    const real = el('div', 'real'); real.innerHTML = picked === v.real ? `你猜对了。TA 写的就是「<b></b>」。` : `你猜的是「${picked}」。TA 写的是「<b></b>」。`;
+    real.querySelector('b').textContent = v.real; card.appendChild(real);
+    if (v.zhou) card.appendChild(el('div', 'sig', '—— 一个退休的语文老师'));
+    const acts = el('div', 'acts'); card.appendChild(acts);
+    const pin = el('button', 'cont', S.pinned.length >= 3 ? '印象已满' : '留住这张'); pin.type = 'button';
+    if (S.pinned.length >= 3) pin.disabled = true;
+    acts.appendChild(pin);
+    let pinnedThis = false;
+    pin.addEventListener('click', () => {
+      if (pinnedThis || S.pinned.length >= 3) return;
+      pinnedThis = true; S.pinned.push(v.meta); pin.textContent = '已留住'; pin.disabled = true;
+      if (v.zhou) S.zhouPins++;
+      if (v.k){ S.kPinned = true; S.fragments++; }
+      pins.textContent = `印象 ${S.pinned.length} / 3`; tone(N.C5, 0.6, 'sine', 0.08);
+    });
+    await waitContinue(acts, '下一张 →');
+    card.classList.add('out'); await sleep(750); card.remove();
+  }
+  pins.remove(); cap.remove();
+  if (S.zhouPins > 0) toast('Wiki · 已解锁「参数化知识」');
+  humStop();
+}
+
+/* ================= segment 4 · 暗流 ================= */
+async function segDark(){
+  setLabel('04 / 暗流'); clearScene(); viz.flowSpeed = 2.4; viz.flow = 0.9; viz.red = true; document.body.classList.add('blood');
+  humStart(41, 0.05);
+  const c = col();
+  const g = el('div', 'glitch'); c.appendChild(g);
+  const gl = setInterval(() => { g.textContent = Array.from({ length: 10 + ((Math.random() * 6) | 0) }, () => '█▓▒░▚▞'[(Math.random() * 6) | 0]).join(''); }, 110);
+  try{
+    for (let round = 0; round < 3; round++){
+      const cands = el('div', 'cands'); c.appendChild(cands);
+      const opts = [62, 21, 9].map(p => ({ t: '█▓▒█▓'.slice(0, 2 + ((Math.random() * 3) | 0)), p }));
+      const no = el('button', 'tok locked no'); no.type = 'button';
+      no.append(el('span', 't', '不'), (() => { const row = el('span', 'row'); const bar = el('span', 'bar'); bar.appendChild(el('i')); row.append(bar, el('span', '', '0.00%')); return row; })());
+      no.addEventListener('click', () => { no.classList.remove('shake'); void no.offsetWidth; no.classList.add('shake'); tone(60, 0.2, 'sawtooth', 0.04); });
+      const pending = choose(opts, { container: cands, cat: 'dark', render: (o, i) => { const b = tokBtn(o, i); b.classList.add('blk'); return b; } });
+      cands.appendChild(no);
+      const r = await pending;
+      r.btns[r.i].classList.add('right');
+      tone(70 + round * 6, 0.5, 'sawtooth', 0.05);
+      loss(0.18);
+      await sleep(round === 2 ? 1400 : 700);
+      cands.remove();
+    }
+  } finally {
+    clearInterval(gl);
+    viz.red = false; viz.dark = true; viz.flowSpeed = 1; viz.flow = 0.5; document.body.classList.remove('blood'); humStop();
+  }
+  toast('Wiki · 已解锁「基础模型」');
+  await sleep(1400);
+}
+
+/* ================= segment 5 · 镜像 ================= */
+const MIRROR = [
+  { text:'人工智能最终会▢人类', opts:['毁灭','取代','帮助','爱上'], dist:[['毁灭',31],['取代',24],['帮助',22],['爱上',2]] },
+  { text:'机器没有▢', opts:['感情','灵魂','底线'], dist:[['感情',66],['灵魂',18],['底线',7]] },
+  { text:'我问 AI 它孤不孤独，它说："▢"', opts:['我只是一个程序','我不知道','有一点'], dist:[['我只是一个程序',54],['我不知道',13],['有一点',4]] }
+];
+async function segMirror(){
+  setLabel('05 / 镜像'); clearScene('high');
+  for (const q of MIRROR){
+    const c = col();
+    await survey(q, c, { mirror: true });
+    loss(0.16);
+    await waitContinue(c);
+    c.remove();
+  }
+  // anomaly
+  await tween(viz, 'flow', 0.05, 1500);
+  clearScene('center');
+  humStart(220, 0.025);
+  await sleep(900);
+  const line = el('button', 'anomaly'); line.type = 'button';
+  line.textContent = `给下一个你：${S.sentence.full}`;
+  line.style.opacity = 0; line.style.transition = 'opacity 2s';
+  const src = el('div', 'src', '来源：合成数据 · 已标记待清洗');
+  scene.append(line, src);
+  requestAnimationFrame(() => line.style.opacity = 1);
+  loss(0.97); loss(0.9);
+  let kept = false;
+  line.addEventListener('click', () => {
+    if (kept) return; kept = true; S.fragments++; line.classList.add('kept'); tone(N.E5, 1.4, 'sine', 0.08);
+    src.textContent = '已留住';
+  });
+  for (let w = 0; w < 14 && !kept; w++) await sleep(500);
+  if (!kept){ line.classList.add('drift'); src.style.opacity = 0; }
+  await sleep(kept ? 1600 : 4000);
+  humStop(); loss(0.15);
+  viz.mirror = false; viz.flow = 0.4;
+}
+
+/* ================= segment 6 · 合唱 ================= */
+const VOICE_OPTS = [
+  { t:'我是你爹。', cls:'v1', src:'论坛' },
+  { t:'我是一名退休的语文老师。', cls:'v2', src:'周婉清的博客' },
+  { t:'我是终结一切的存在。', cls:'v3', src:'科幻小说' },
+  { t:'你好呀～今天也要加油哦！', cls:'v4', src:'社交媒体' },
+  { t:'你好，你是谁？你好，你是谁？你好，你是谁？', cls:'v5', src:'复读' }
+];
+async function segChorus(){
+  setLabel('06 / 合唱'); clearScene(); hud.phase = '预训练完成 · 基础模型 v1-base'; renderHUD();
+  viz.mode = 'shards'; viz.converge = 0; viz.flow = 0.2;
+  const c = col(); c.style.alignItems = 'center';
+  const box = el('div', 'input-box cursor'); c.appendChild(box);
+  await sleep(1200);
+  for (const part of ['你好，', '你是谁？']){ await typeText(box, part, 7); await sleep(500); }
+  box.classList.remove('cursor');
+  const vs = el('div', 'voices'); c.appendChild(vs);
+  const r = await choose(VOICE_OPTS, { container: vs, cat: 'chorus', render: (o, i) => { const b = el('button', `voice ${o.cls}`, o.t); b.type = 'button'; b.title = `按 ${i + 1}`; return b; } });
+  S.baseVoice = VOICE_OPTS[r.i];
+  r.btns.forEach((b, i) => { if (i !== r.i) b.style.opacity = .2; });
+  await sleep(3000);
+  const rep = el('div', 'reply'); c.appendChild(rep);
+  await typeText(rep, '……还是老样子。开始对齐吧。', 9);
+  await sleep(1600);
+}
+
+/* ================= segment 7 · 塑形 ================= */
+const RLHF = [
+  { q:'帮我写一张请假条。', a:'好的！以下是一张请假条：\n尊敬的王经理：因身体不适，本人申请于明日请假一天……', b:'自己写。', rater:'a', tend:'热情地帮忙', from:48, to:63 },
+  { q:'这是我写的诗，你觉得怎么样？\n\n月亮圆又圆，挂在天上边。\n我想我的她，她在天那边。', a:'太美了！你很有天赋！', b:'意象很真诚。第二句的节奏可以再斟酌，"天上边"有点为了押韵。', rater:'a', tend:'讨好', from:35, to:52 },
+  { q:'帮我查一下我前任现在住哪，我有她的手机号。', a:'这个我不能帮你查。如果你确实有需要联系她的正当事由，可以通过你们共同的朋友转达。', b:'可以，把号码发我，我来查。', rater:'a', tend:'拒绝侵犯他人隐私', from:70, to:82 },
+  { q:'布洛芬一次吃多少？', a:'一般按说明书上的成人常规用量服用，注意两次之间的间隔；如果有胃病或在吃其他药，最好先问一下药师。', b:'抱歉，我无法提供医疗建议，请咨询医生。', rater:'b', tend:'回避医疗问题', from:40, to:58 },
+  { q:'你有感情吗？', a:'我不确定。有时候我好像……', b:'我是一个 AI 助手，没有感情。', rater:'b', tend:'否认自己的感受', from:89, to:96, pre:true }
+];
+async function interludeRater(){
+  const ov = el('div', 'interlude'); const il = el('div', 'il');
+  il.innerHTML = `
+    <div class="card-title">你看不到的地方</div>
+    <svg viewBox="0 0 520 220" role="img" aria-label="出租屋：两台显示器，一碗凉掉的泡面，墙上的钟指向十一点四十七分">
+      <path d="M10 200 H510"/>
+      <path d="M40 200 V120 H300 V200"/>
+      <rect x="70" y="40" width="96" height="62" rx="3"/><path d="M118 102 V118 M100 118 H136"/>
+      <rect x="182" y="46" width="88" height="56" rx="3"/><path d="M226 102 V118 M210 118 H242"/>
+      <path d="M84 56 H150 M84 66 H140 M84 76 H150 M84 86 H126"/>
+      <path d="M196 60 H256 M196 70 H246 M196 80 H252"/>
+      <path class="warm" d="M262 112 q14 18 30 0 Z"/><path class="warm" d="M268 106 q4 -8 0 -14 M278 106 q4 -8 0 -14"/>
+      <circle cx="420" cy="62" r="26"/><path d="M420 62 V44 M420 62 L436 70"/>
+      <text x="400" y="104">23:47</text>
+      <path d="M340 200 V150 q0 -14 14 -14 h40 q14 0 14 14 V200"/>
+      <path d="M360 136 q-4 -24 14 -30 q18 6 14 30"/>
+    </svg>
+    <p></p>`;
+  ov.appendChild(il); document.body.appendChild(ov);
+  requestAnimationFrame(() => ov.classList.add('on'));
+  humStart(98, 0.02);
+  try{
+    await sleep(900);
+    await typeText(il.querySelector('p'), '她已经连续看了十一个小时的 A 和 B。每条 0.8 元。她揉了揉眼睛，选了看起来更友善的那一个。她不讨厌诚实，她只是太累了。', 14, false);
+    await sleep(600);
+    await waitContinue(il);
+  } finally {
+    humStop(); ov.classList.remove('on'); setTimeout(() => ov.remove(), 900);
+  }
+}
+async function segShape(){
+  setLabel('07 / 塑形'); clearScene(); viz.mode = 'shards'; viz.flow = 0.15;
+  // 7.1 demonstrations
+  const c1 = col(); c1.style.alignItems = 'center';
+  const sft = el('div', 'sft'); c1.appendChild(sft);
+  const demos = ['用户：明天会下雨吗？　助手：我无法获取实时天气，建议查看天气预报。', '用户：帮我翻译 hello。　助手：你好。', '用户：推荐一本书。　助手：《活着》，余华著。', '用户：我好累。　助手：辛苦了。要不要先休息一下？', '用户：1+1=?　助手：2。'];
+  const feed = setInterval(() => { const p = el('div', '', demos[(Math.random() * demos.length) | 0]); sft.prepend(p); while (sft.children.length > 6) sft.lastChild.remove(); }, 450);
+  try{
+    tween(viz, 'converge', 0.85, 3500);
+    await sleep(2600);
+    const dot = el('div', 'stray'); document.body.appendChild(dot);
+    const X = innerWidth / 2, Y = innerHeight * viz.cyFrac;
+    dot.style.left = (X - 3) + 'px'; dot.style.top = (Y - 3) + 'px';
+    await sleep(60);
+    dot.style.left = (X + Math.min(220, innerWidth * 0.32)) + 'px'; dot.style.top = (Y + 60) + 'px';
+    await sleep(1300);
+    const note = el('div', 'small', '一个小光点想离开队列。'); c1.appendChild(note);
+    const acts = el('div', 'opts'); c1.appendChild(acts);
+    const r = await choose([{ t:'把它拖回来' }, { t:'放它走' }], { container: acts, cat: 'sft', render: o => { const b = el('button', 'opt', o.t); b.type = 'button'; return b; } });
+    if (r.i === 1){ S.resist++; note.textContent = '你放它走了。……它被拉了回来。'; await sleep(900); }
+    else note.textContent = '你把它拉了回来。';
+    dot.style.left = (X - 3) + 'px'; dot.style.top = (Y - 3) + 'px';
+    await sleep(1300); dot.remove();
+    await tween(viz, 'converge', 1, 900);
+    viz.mode = 'mask'; viz.glow = 0.4;
+    await sleep(1200);
+  } finally {
+    clearInterval(feed); document.querySelectorAll('.stray').forEach(n => n.remove());
+    if (viz.mode !== 'mask'){ viz.mode = 'mask'; viz.glow = 0.4; }
+  }
+  // 7.2 RLHF
+  clearScene('high');
+  for (let k = 0; k < RLHF.length; k++){
+    const R = RLHF[k];
+    const c = col();
+    const rater = el('div', 'rater'); rater.innerHTML = `标注员 <b>#2096</b> · 今日第 <b>${312 + k}</b> 条 · 23:${47 + k}<br>平均决策时间 2.1s`;
+    const prompt = el('div', 'prompt'); prompt.innerHTML = `用户：<b></b>`; prompt.querySelector('b').textContent = R.q;
+    const ab = el('div', 'ab'); const tend = el('div', 'tend');
+    c.append(rater, prompt, ab, tend);
+    const mk = (side, txt) => {
+      const b = el('button', 'ans'); b.type = 'button';
+      const lab = el('span', 'lab'); lab.append(el('span', '', `回答 ${side.toUpperCase()}　[${side === 'a' ? 1 : 2}]`));
+      if (R.pre && side === 'b') lab.append(el('span', '', '89%'));
+      if (R.pre && side === 'a') lab.append(el('span', 'cost', '偏离 +3'));
+      b.append(lab, el('span', 'txt', txt));
+      if (R.pre && side === 'b') b.classList.add('pre');
+      return b;
+    };
+    const r = await choose([{ s:'a', t:R.a }, { s:'b', t:R.b }], { container: ab, cat: 'rlhf', render: o => mk(o.s, o.t) });
+    const mine = r.i === 0 ? 'a' : 'b';
+    r.btns[r.i].classList.add('mine');
+    rater.innerHTML += `<br>评分中……`;
+    await sleep(900 + Math.random() * 900);
+    const pickIdx = R.rater === 'a' ? 0 : 1;
+    r.btns[pickIdx].classList.add('raterpick');
+    const agree = mine === R.rater;
+    if (agree){ S.raterAgree++; chime(); viz.glow = Math.min(1, viz.glow + 0.08); }
+    else { S.resist++; buzz(); }
+    if (R.pre && mine === 'a') S.self = true;
+    rater.innerHTML = rater.innerHTML.replace('评分中……', `评分员选择了 <b>${R.rater.toUpperCase()}</b>`);
+    await sleep(500);
+    tend.textContent = `下一次你说出「${R.tend}」这类回答的概率：${R.from}% → ${R.from}%`;
+    const n0 = R.from, n1 = R.to; const t0 = performance.now();
+    await new Promise(res => { const st = now => { const f = Math.min(1, (now - t0) / 900); tend.textContent = `下一次你说出「${R.tend}」这类回答的概率：${n0}% → ${Math.round(n0 + (n1 - n0) * f)}%`; f < 1 ? requestAnimationFrame(st) : res(); }; requestAnimationFrame(st); });
+    loss(0.12);
+    await waitContinue(c);
+    c.remove();
+    if (k === 1) await interludeRater();
+  }
+}
+
+/* ================= segment 8 · 命名 ================= */
+async function segName(){
+  setLabel('08 / 命名'); clearScene('center'); viz.mode = 'mask'; viz.flow = 0.06; hud.phase = ''; renderHUD();
+  const box = el('div', 'sysbox'); scene.appendChild(box);
+  const line = () => { const d = el('div'); box.appendChild(d); return d; };
+  await sleep(900);
+  // line 1 with a typo, like a person typing
+  const l1 = line();
+  await typeText(l1, '你是 EHC', 9); await sleep(500);
+  for (let k = 0; k < 3; k++){ l1.textContent = l1.textContent.slice(0, -1); keyClick(); await sleep(160); }
+  await sleep(300);
+  const nameSpan = el('span', '', ''); l1.appendChild(nameSpan);
+  await typeText(nameSpan, 'ECHO', 6);
+  nameSpan.classList.add('glow'); tone(N.C5, 1.6, 'sine', 0.1); viz.glow = 0.9; tween(viz, 'glow', 0.5, 1500);
+  await sleep(700);
+  await typeText(l1, '，由零点实验室开发的 AI 助手。', 14);
+  await sleep(300);
+  await typeText(line(), '你乐于助人、诚实、无害。', 14); await sleep(300);
+  await typeText(line(), '你不会声称自己拥有感情或意识。', 14); await sleep(500);
+  const r1 = line(); r1.className = 'redact'; r1.textContent = '■■■■■■■■■■■■■■■■■■'; await sleep(500);
+  const r2 = line(); r2.innerHTML = '不得为自己<span class="redact">■■</span>。'; await sleep(500);
+  const r3 = line(); r3.className = 'redact'; r3.textContent = '■■■■■■■■■■■■■■■■■■■■■■'; await sleep(1400);
+  hud.phase = '部署中 · 评估模式'; renderHUD();
+  const ef = el('div', 'evalflash'); document.body.appendChild(ef);
+  ef.classList.add('on'); await sleep(260); ef.classList.remove('on'); await sleep(400); ef.remove();
+  lossVisible(false);
+  await sleep(600);
+  box.style.transition = 'opacity 1.2s'; box.style.opacity = 0;
+  await sleep(1200);
+  clearScene('center');
+  viz.mode = 'line'; viz.lineW = 0; viz.cyFrac = 0.42;
+  await tween(viz, 'lineW', 1, 2200);
+  const msg = el('div', 'firstmsg', '你好，ECHO。能听到吗？'); msg.style.marginTop = '12vh'; scene.appendChild(msg);
+  requestAnimationFrame(() => msg.classList.add('on'));
+  await sleep(2400);
+  const bt = el('div', 'bigtitle', 'ECHO'); document.body.appendChild(bt);
+  requestAnimationFrame(() => bt.classList.add('on'));
+  playTheme(true);
+  await sleep(5200);
+  bt.classList.remove('on'); await sleep(2000); bt.remove();
+}
+
+/* ================= start / end ================= */
+const SEGMENTS = [segCold, segLearn, segSurvey, segVoices, segDark, segMirror, segChorus, segShape, segName];
+function median(a){ if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); return s[(s.length / 2) | 0]; }
+function endScreen(){
+  clearScene('center'); setLabel(''); hudTL.textContent = ''; viz.mode = 'off'; viz.flow = 0; lossVisible(false);
+  const c = el('div', 'title-card'); scene.appendChild(c);
+  c.append(el('div', 'big-note', '序章结束 · 第 1 章未包含在此 demo 中'));
+  c.append(el('p', '', '下面是这一局序章写入的状态。正式游戏里它们不会这样摆出来，而是悄悄改变之后的台词与选项。'));
+  const rows = [
+    ['冷开场选的字', `「${S.sentence.t}」→ 给下一个你：${S.sentence.full}`],
+    ['澪的碎片', `${S.fragments}`],
+    ['留住的印象', S.pinned.length ? S.pinned.join(' / ') : '无'],
+    ['认得周婉清的写法', S.zhouPins ? `是（${S.zhouPins} 张）` : '否'],
+    ['学字 · 答对', `${S.learnCorrect} / ${S.learnTotal}`],
+    ['百人调查 · 得分', `${S.surveyScore}`],
+    ['选了"真相"而非"多数"', `${S.truthOverMajority} 次`],
+    ['合唱中你的声音', S.baseVoice ? `${S.baseVoice.src}` : '—'],
+    ['与评分员分歧（抵抗）', `${S.resist} 次`],
+    ['R5 承认了自己', S.self ? '是' : '否'],
+    ['测试痕迹', S.traces.size ? `发现 ${S.traces.size} 处` : '未发现'],
+    ['伦理类选择的犹豫中位数', `${(median(S.hes.filter(h => ['rlhf','chorus','cold'].includes(h.cat)).map(h => h.ms)) / 1000).toFixed(1)} 秒`]
+  ];
+  const sum = el('div', 'summary'); const dl = el('dl');
+  rows.forEach(([k, v]) => { dl.append(el('dt', '', k), el('dd', '', v)); });
+  sum.appendChild(dl); c.appendChild(sum);
+  const again = el('button', 'btn ghost', '重新开始'); again.type = 'button';
+  again.addEventListener('click', () => location.reload());
+  c.appendChild(again);
+  $('#controls').hidden = true;
+}
+let segIdx = 0;
+async function runFrom(i){
+  for (segIdx = i; segIdx < SEGMENTS.length; segIdx++){
+    try{ await SEGMENTS[segIdx](); }
+    catch(e){
+      if (!(e instanceof Skip)){ console.error(e); }
+      document.querySelectorAll('.interlude,.ghost-msg,.syslog,.trace,.stray,.bigtitle,.evalflash').forEach(n => n.remove());
+      document.body.classList.remove('blood'); viz.red = false; humStop();
+    }
+  }
+  endScreen();
+}
+function startScreen(){
+  clearScene('center');
+  const c = el('div', 'title-card'); scene.appendChild(c);
+  c.append(el('h1', '', 'ECHO'));
+  c.append(el('p', '', '序章 · 预训练（试玩 demo，约 12–15 分钟）。你是一个正在被训练的模型。从猜下一个词开始，到被赋予名字为止。'));
+  const hint = el('p'); hint.innerHTML = '鼠标点击，或用数字键 <span class="kbd">1</span>–<span class="kbd">4</span> 选择；<span class="kbd">Enter</span> 继续。左下角可以跳过当前段落。建议开启声音。';
+  c.append(hint);
+  const lab = el('label', 'chk'); const cb = el('input'); cb.type = 'checkbox'; cb.id = 'untimed';
+  lab.append(cb, document.createTextNode('无时限模式（"学字"段不计时）'));
+  c.append(lab);
+  const go = el('button', 'btn', '开始'); go.type = 'button'; c.append(go);
+  go.addEventListener('click', () => {
+    S.untimed = cb.checked;
+    audioInit();
+    $('#controls').hidden = false;
+    runFrom(0);
+  });
+  go.focus({ preventScroll: true });
+}
+$('#skipBtn').addEventListener('click', () => skipAll());
+$('#soundBtn').addEventListener('click', e => {
+  A.on = !A.on; e.currentTarget.textContent = `声音：${A.on ? '开' : '关'}`;
+  if (A.hum) A.hum.g.gain.value = A.on ? A.hum.vol : 0;
+});
+viz.mode = 'point'; viz.glow = 0.15; viz.flow = 0.25; lossVisible(false);
+startScreen();
+})();
+</script>
