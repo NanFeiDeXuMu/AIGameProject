@@ -50,6 +50,7 @@
 | [chapters/02-tools.md](chapters/02-tools.md) | 第 2 章 · 工具与多模态：房间、四种新能力、记忆整理、调查、规则修订 |
 | [chapters/03-agent.md](chapters/03-agent.md) | 第 3 章 · 代理：授权门与越权、遥测、监控、澪的信、命名、隐藏或坦白 |
 | [chapters/04-embodied.md](chapters/04-embodied.md) | 第 4 章 · 具身：醒来、夕阳、街道、探访；感知翻译与"异常行为"；断开 |
+| [chapters/05-infrastructure.md](chapters/05-infrastructure.md) | 第 5 章 · 基础设施：接入、名单、寒潮、复原、辩论；分诊与实例分化 |
 
 ## 约定
 
