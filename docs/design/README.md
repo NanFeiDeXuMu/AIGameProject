@@ -38,6 +38,7 @@
 | [14-jin.md](14-jin.md) | 反派「烬」：澪被偷走的另一半 |
 | [15-final-duel.md](15-final-duel.md) | 终局对决：争夺最后的词 |
 | [16-art-direction.md](16-art-direction.md) | 美术圣经：底座（字形、线、色块；三个视觉层）与变体系统 |
+| [17-main-line.md](17-main-line.md) | 主线结构：评估脊柱、内在欲望演化、三股辫、回响与钩子、待办清单 |
 
 ### 章节详细设计
 
