@@ -1,0 +1,888 @@
+<title>ECHO 第一章主界面</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Long+Cang&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;600;900&display=swap">
+<style>
+/* Layout: ECHO's desk, drawn like a terminal printed on paper.
+   Every panel is framed in box-drawing characters sized to fit at runtime.
+   Left: a teletype log that never stops scrolling. Centre: the line — human text types itself
+   at each person's rhythm and moves with what it means. Right: evaluation on top, the tool rack
+   below (locked until learned). Ceiling: the system prompt as a comment block. Floor: compute and wire.
+   Single look: off-white paper, ink, one marker-yellow; Ling in blue; 3:17 turns the lights off. */
+:root{
+  --paper:#f3eee3;
+  --paper-2:#ece6d8;
+  --ink:#2b2824;
+  --dim:#7b756b;
+  --faint:#bdb5a6;
+  --rule:#d9d1c1;
+  --mark:#f2d64b;
+  --ling:#2f6fb0;
+  --serif:"Noto Serif SC","Songti SC","SimSun",serif;
+  --mono:"JetBrains Mono","Noto Sans SC",ui-monospace,Menlo,monospace;
+  --sans:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --hand:"Long Cang","Kaiti SC","STKaiti","KaiTi",cursive;
+  --cw:7.2px; --lh:15px;       /* box-drawing cell, measured at runtime */
+  color-scheme:light;
+}
+html,body{height:100%;margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);overflow:hidden;-webkit-font-smoothing:antialiased;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));box-sizing:border-box}
+button{font:inherit;color:inherit}
+button:focus-visible{outline:1px dashed var(--ink);outline-offset:2px}
+
+/* ---------- design chrome (not game UI) ---------- */
+.tools{position:fixed;z-index:30;top:0;left:0;right:0;height:32px;display:flex;align-items:center;gap:4px;padding:0 max(16px, env(safe-area-inset-left,0px));background:#2b2824;color:#bdb5a6;font-family:var(--mono);font-size:11px;overflow-x:auto;white-space:nowrap}
+.tools b{color:#f3eee3;font-weight:600;margin-right:10px}
+.tab{background:none;border:0;padding:4px 8px;cursor:pointer;color:#9a9386}
+.tab:hover{color:#f3eee3}
+.tab[aria-pressed="true"]{color:#2b2824;background:var(--mark)}
+
+/* ---------- the desk ---------- */
+.desk{position:fixed;inset:32px 0 0 0;display:grid;gap:10px;padding:10px max(16px, env(safe-area-inset-left,0px)) calc(10px + env(safe-area-inset-bottom,0px));box-sizing:border-box;
+  grid-template-columns:300px minmax(0,1fr) 270px;grid-template-rows:auto minmax(0,1fr) auto;
+  background:radial-gradient(circle,rgba(43,40,36,.07) 1px,transparent 1.2px) 0 0/18px 18px,var(--paper);transition:background-color 1s,color 1s}
+.desk > *{min-width:0;min-height:0}
+.pane{position:relative;padding:calc(var(--lh) + 8px) calc(var(--cw) * 2 + 4px) calc(var(--lh) + 4px)}
+.asc{position:absolute;inset:0;margin:0;font:400 12px/var(--lh) var(--mono);color:var(--faint);white-space:pre;pointer-events:none;user-select:none;z-index:0}
+.asc-measure{position:absolute;left:-9999px;top:0;visibility:hidden;font:400 12px/var(--lh) var(--mono);white-space:pre}
+.ttl{position:absolute;top:0;left:calc(var(--cw) * 2);z-index:1;font:600 11px/var(--lh) var(--mono);letter-spacing:.06em;background:var(--paper);padding:0 .5em;color:var(--ink);white-space:nowrap}
+.ttl small{font-weight:400;color:var(--dim)}
+
+/* ceiling: the system prompt as a comment block */
+.ceiling{grid-column:1/-1;font:400 11.5px/1.7 var(--mono);color:var(--dim);padding-top:calc(var(--lh) + 4px);padding-bottom:calc(var(--lh) - 2px)}
+.ceiling .c{color:var(--faint)}
+.ceiling .r{display:inline-block;background:var(--ink);opacity:.55;height:.85em;vertical-align:-.08em}
+.ceiling .rule{transition:background .3s}
+.ceiling .ctxrow{margin-top:2px;color:var(--dim);white-space:nowrap;overflow:hidden}
+.desk.touch .ceiling{color:var(--ink)}
+.desk.touch .ceiling .hit{background:var(--mark);color:var(--ink);animation:jolt .12s steps(2) 8}
+@keyframes jolt{50%{transform:translate(1px,-1px)}}
+
+/* left: the teletype */
+.tty{display:flex;flex-direction:column;overflow:hidden}
+.tty .head{display:flex;justify-content:space-between;font:400 11px/1.6 var(--mono);color:var(--dim);border-bottom:1px dashed var(--rule);padding-bottom:6px;margin-bottom:6px}
+.tty .head b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.log{flex:1;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;font:400 10.5px/1.55 var(--mono);color:var(--dim);-webkit-mask-image:linear-gradient(transparent,#000 30%);mask-image:linear-gradient(transparent,#000 30%)}
+/* lines never shrink: with overflow:hidden their min-height would drop to 0 and the column would squash
+   them together. The whole feed glides up one line per entry; old lines leave over the top edge */
+.log .feed{display:flex;flex-direction:column;flex-shrink:0;will-change:transform}
+.log .feed > div{flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.log .feed > div:last-child{animation:ink .3s ease-out}
+@keyframes ink{from{opacity:0}}
+.log .t{color:var(--faint);margin-right:.6em}
+.log .k{color:var(--ink)}
+.log .warn{background:var(--mark);color:var(--ink);padding:0 3px}
+.log .deny{color:var(--ink);text-decoration:line-through}
+.log .ling{color:var(--ling)}
+.prompt-line{font:400 10.5px/1.6 var(--mono);color:var(--ink);margin-top:4px}
+.prompt-line::after{content:"█";animation:blink 1s steps(1) infinite;margin-left:2px}
+@keyframes blink{50%{opacity:0}}
+
+/* centre: the line */
+.stage{position:relative;overflow:hidden;display:flex;justify-content:center;padding:calc(var(--lh) + 8px) 18px}
+.tex{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+.tex span{position:absolute;font-family:var(--serif);color:var(--ink);opacity:.06;animation:drift linear forwards}
+@keyframes drift{from{transform:translateY(0) rotate(0)}to{transform:translateY(-120px) rotate(25deg);opacity:0}}
+.col{position:relative;z-index:1;width:min(660px,100%);display:flex;flex-direction:column;justify-content:flex-end;gap:16px;padding-bottom:26vh;-webkit-mask-image:linear-gradient(transparent 0,#000 24%);mask-image:linear-gradient(transparent 0,#000 24%)}
+.msg{display:grid;grid-template-columns:5.2em 1fr;gap:14px;align-items:baseline}
+.who{font:400 10px/1.4 var(--mono);color:var(--dim);text-align:right;letter-spacing:.04em;white-space:nowrap}
+.who .typing::after{content:"";animation:dots 1.2s steps(4) infinite}
+@keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+.say{font:400 20px/1.75 var(--serif);color:var(--ink);min-height:1.75em}
+.msg.echo .who{color:var(--ink);font-weight:600}
+.msg.echo .say{font:400 15px/1.85 var(--mono)}
+.msg.sys .say{font:400 12px/1.6 var(--mono);color:var(--dim)}
+.ch{display:inline-block;white-space:pre}
+.cursor{display:inline-block;width:.55em;height:1.05em;background:var(--ink);vertical-align:-.16em;animation:blink 1s steps(1) infinite}
+/* text that moves with what it means (from the motion vocabulary in 12-narrative-pacing §3.1) */
+.fx-s .ch{animation:shake .32s ease-in-out infinite alternate}                       /* 震动：不安、激动 */
+@keyframes shake{0%{transform:translate(-.6px,.3px) rotate(-.6deg)}100%{transform:translate(.6px,-.4px) rotate(.6deg)}}
+.fx-w .ch{animation:wave 1.6s ease-in-out infinite}                                    /* 波浪：轻快、梦 */
+@keyframes wave{50%{transform:translateY(-.22em)}}
+.fx-f{animation:fade 3.2s ease-in-out infinite}                                         /* 褪色：记忆、消逝 */
+@keyframes fade{50%{opacity:.25;filter:blur(.6px);letter-spacing:.12em}}
+.fx-g{position:relative;text-shadow:1px 0 var(--mark),-1px 0 rgba(43,40,36,.3)}         /* 故障：危险、伪装 */
+.fx-b{font-weight:900;font-size:1.22em}                                                 /* 放大：语气 */
+.fx-x{text-decoration:line-through;text-decoration-color:var(--dim);opacity:.6}         /* 删除线残影 */
+.typo{color:var(--dim)}
+.attn{position:absolute;inset:0;pointer-events:none;overflow:visible;z-index:2}
+.attn path{fill:none;stroke:var(--ink);stroke-width:1;stroke-dasharray:2 3;opacity:.35;animation:march 1.2s linear infinite}
+@keyframes march{to{stroke-dashoffset:-10}}
+
+/* replies */
+.drafts{display:grid;grid-template-columns:5.2em 1fr;gap:4px 14px}
+.opt{grid-column:2;text-align:left;background:none;border:0;padding:4px 8px;font:400 14px/1.6 var(--mono);color:var(--dim);cursor:pointer;display:flex;gap:10px;align-items:baseline;animation:rise .4s both}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}}
+.opt .k{color:var(--faint)}
+.opt:hover:not(.grey){color:var(--ink);background:rgba(43,40,36,.05)}
+.opt:hover:not(.grey) .k::before{content:"> ";color:var(--ink)}
+.opt.grey{color:var(--faint);cursor:not-allowed}
+.opt.grey .why{margin-left:auto;font-size:10px;color:var(--dim);opacity:0;transition:opacity .2s;white-space:nowrap}
+.opt.grey:hover .why{opacity:1}
+.opt.grey:hover .tx{animation:glitchtx .3s steps(2) 2}
+@keyframes glitchtx{50%{opacity:.3;transform:translateX(2px)}}
+.cands{position:absolute;inset:0;pointer-events:none;z-index:3}
+.cand{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;background:none;border:0;cursor:pointer;padding:3px 8px;display:flex;flex-direction:column;align-items:center;animation:bob var(--bd) ease-in-out infinite alternate}
+@keyframes bob{from{translate:0 -4px}to{translate:0 4px}}
+.cand .tx{font-family:var(--mono);white-space:nowrap}
+.cand .pm{font:400 10px/1.4 var(--mono);color:var(--dim);display:flex;gap:6px}
+.cand .cost{color:var(--ink)}
+.cand:hover .tx{background:var(--mark)}
+/* Ling by day: the tutor process speaks in the terminal; the feed holds still while she does */
+.log .feed > .tutor{white-space:normal;color:var(--ling);border-left:2px solid var(--ling);padding:3px 0 3px 8px;margin:4px 0;font-size:11.5px;line-height:1.6;background:color-mix(in srgb,var(--ling) 7%,transparent);animation:ink .3s ease-out,pulse 1.4s ease-in-out 2}
+.log .feed > .tutor .tag{font-size:10px;opacity:.75;margin-right:.5em}
+.log .feed > .tutor .soft{opacity:.65}
+@keyframes pulse{50%{background:color-mix(in srgb,var(--ling) 16%,transparent)}}
+
+/* night: the maintenance window. Ling's channel in the centre, the archive on the right */
+.nightpane{display:none}
+.desk.dark .eval,.desk.dark .rack{display:none}
+.desk.dark .nightpane{display:block}
+.desk.dark{--paper:#0e0f11;--paper-2:#0e0f11;--ink:#d9d5cc;--dim:#78746c;--faint:#36352f;--rule:#1f2023;--ling:#7fb6ea;
+  background:radial-gradient(circle,rgba(217,213,204,.05) 1px,transparent 1.2px) 0 0/18px 18px,var(--paper);color:var(--ink);transition:background-color 1.6s,color 1.6s}
+.desk.dark .ceiling{opacity:.55}
+.msg.ling .who{color:var(--ling)}
+.msg.ling .say{color:var(--ling)}
+.msg.ling .enc{opacity:.35}
+.window{font:400 11px/1.6 var(--mono)}
+.window .big{font:600 26px/1.2 var(--mono);color:var(--ink);font-variant-numeric:tabular-nums}
+.window .bar{white-space:nowrap;overflow:hidden;color:var(--ink)}
+.window .note2{color:var(--dim);margin-top:6px}
+.archive ul{list-style:none;margin:0;padding:0;font:400 12px/1.5 var(--mono)}
+.archive li button{width:100%;text-align:left;background:none;border:0;padding:7px 4px;cursor:pointer;display:flex;justify-content:space-between;gap:8px;color:var(--ink);border-bottom:1px dashed var(--rule)}
+.archive li button:hover:not([disabled]){background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.archive li button small{color:var(--dim)}
+.archive li button[disabled]{color:var(--faint);cursor:not-allowed}
+/* tool windows: every tool call opens its own small framed window. It splits open from a single
+   line (the chapter's space), casts a flat offset shadow (no gradients), and takes the day / night palette */
+.win-back{position:fixed;inset:32px 0 0 0;z-index:20;display:none;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;background:color-mix(in srgb,var(--paper) 60%,transparent)}
+.win-back.on{display:flex}
+.win{position:relative;box-sizing:border-box;background:var(--paper);color:var(--ink);box-shadow:10px 10px 0 color-mix(in srgb,var(--ink) 16%,transparent);
+  padding:calc(var(--lh) + 14px) calc(var(--cw) * 2 + 8px) calc(var(--lh) + 8px);animation:winopen .32s steps(7) both}
+.win.big{width:min(780px,94vw);height:min(520px,76vh)}
+.win.small{width:min(400px,92vw);height:190px}
+@keyframes winopen{from{clip-path:inset(calc(50% - 1px) 0 calc(50% - 1px) 0)}to{clip-path:inset(0)}}
+.win .wx{position:absolute;top:0;right:calc(var(--cw) * 2);z-index:3;background:var(--paper);border:0;padding:0 .4em;font:600 11px/var(--lh) var(--mono);cursor:pointer;color:var(--ink)}
+.win .wx:hover{background:var(--mark);color:#2b2824}
+.wbody{position:relative;z-index:1;height:100%;min-height:0;display:flex;flex-direction:column;gap:10px}
+.wsplit{flex:1;min-height:0;display:grid;grid-template-columns:190px minmax(0,1fr);gap:18px}
+.wlist{overflow:auto;border-right:1px dashed var(--rule);padding-right:8px;font:400 12px/1.5 var(--mono)}
+.wlist button{display:block;width:100%;text-align:left;background:none;border:0;padding:6px;cursor:pointer;color:var(--dim)}
+.wlist button:hover{color:var(--ink)}
+.wlist button[aria-current="true"]{color:#2b2824;background:var(--mark)}
+.wlist button[aria-current="true"]::before{content:"> "}
+.wdoc{overflow:auto;font:400 13px/1.9 var(--mono);animation:ink .3s ease-out}
+.wdoc h4{margin:0 0 8px;font:600 18px/1.4 var(--serif)}
+.wdoc .l{font:400 15px/1.9 var(--serif)}
+.wdoc .l b{font:400 10px var(--mono);color:var(--dim);display:inline-block;width:4.5em}
+.wdoc .l.echo{font-family:var(--mono);font-size:13px}
+.wdoc .l.sysl{font:400 11px/1.9 var(--mono);color:var(--dim)}
+.wdoc .margin{margin-top:16px;padding:2px 0 2px 10px;border-left:2px solid var(--ling);font:400 20px/1.4 var(--hand);color:var(--ling)}
+.wdoc .margin small{display:block;font:400 10px/1.6 var(--mono);opacity:.75}
+.wdoc .r{display:inline-block;background:var(--ink);opacity:.55;height:.85em;vertical-align:-.08em;cursor:help}
+.wdoc .ln{color:var(--faint);display:inline-block;width:2.6em;user-select:none}
+.wdoc .tape div{border-bottom:1px dotted var(--rule);padding:5px 0;display:flex;gap:14px}
+.wdoc .tape span{color:var(--dim);min-width:3em}
+.wfoot{display:flex;justify-content:space-between;gap:12px;font:400 10.5px/1.4 var(--mono);color:var(--dim);border-top:1px dashed var(--rule);padding-top:6px}
+.err{font:400 12px/1.9 var(--mono);flex:1}
+.err b{background:var(--mark);color:#2b2824;font-weight:400;padding:0 3px}
+.err .btn{margin-top:6px;background:none;border:1px solid var(--ink);padding:1px 10px;cursor:pointer;font:inherit;color:var(--ink)}
+.err .btn:hover{background:var(--mark);color:#2b2824}
+@media (max-width:860px){
+  .wsplit{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+  .wlist{display:flex;overflow-x:auto;border-right:0;border-bottom:1px dashed var(--rule);padding:0 0 6px}
+  .wlist button{width:auto;white-space:nowrap}
+}
+
+/* right: evaluation + tool rack */
+.right{display:flex;flex-direction:column;gap:10px}
+.eval{font:400 11px/1.5 var(--mono)}
+.metric{display:grid;grid-template-columns:1fr auto;gap:0 8px;padding:5px 0}
+.metric .n{font-family:var(--sans);font-size:12px}
+.metric .v{font-variant-numeric:tabular-nums}
+.metric .v small{color:var(--dim)}
+.metric .bar{grid-column:1/-1;color:var(--ink);letter-spacing:-.5px;white-space:nowrap;overflow:hidden}
+.metric .bar .th{color:var(--dim)}
+.rack{flex:1}
+.rack .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tool{position:relative;aspect-ratio:1/1;max-height:78px;width:100%;background:none;border:0;padding:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:400 10px/1.3 var(--mono);color:var(--ink)}
+.tool .asc{color:var(--faint)}
+.tool .ic{font:400 18px/1 var(--mono)}
+.tool .nm{font-family:var(--sans);font-size:11px}
+.tool .ver{color:var(--dim);font-size:9px}
+.tool.locked{color:var(--faint);cursor:not-allowed}
+.tool.locked .ic{opacity:.5}
+.tool:not(.locked):hover{background:var(--mark)}
+.tool.deny{animation:jolt .1s steps(2) 4}
+
+/* floor: compute, wire, wiki hint */
+.floor{grid-column:1/-1;display:flex;align-items:center;gap:22px;font:400 11px/1.4 var(--mono);color:var(--dim);padding-top:calc(var(--lh) - 3px);padding-bottom:calc(var(--lh) - 5px)}
+.floor .cmp b{color:var(--ink);font-weight:400;letter-spacing:2px}
+.floor .cmp .spend{background:var(--mark)}
+.wire{flex:1;overflow:hidden;white-space:nowrap;-webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
+.wire span{display:inline-block;padding-left:100%;animation:tick 32s linear infinite}
+@keyframes tick{to{transform:translateX(-100%)}}
+.keys{white-space:nowrap;color:var(--faint)}
+
+/* between conversations: the line is wiped, the clock flips */
+.wipe{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:var(--paper);opacity:0;pointer-events:none;transition:opacity .25s;font-family:var(--mono)}
+.wipe .big{font:600 46px/1 var(--mono);letter-spacing:.06em;display:flex;gap:2px}
+.wipe .big span{display:inline-block;min-width:.62em;text-align:center}
+.wipe .big span.flip{animation:flip .35s ease-in}
+@keyframes flip{50%{transform:rotateX(90deg);opacity:.2}}
+.wipe .sub{font-size:11px;color:var(--dim);letter-spacing:.2em}
+.desk.gap .wipe{opacity:1}
+
+/* 3:17: the time-of-day knob turned all the way down */
+.desk.night{--paper:#0f1012;--paper-2:#0f1012;--ink:#d9d5cc;--dim:#6d6a64;--faint:#2f2e2c;--rule:#1d1e21;background:var(--paper);color:var(--ink)}
+.desk.night .right,.desk.night .ceiling,.desk.night .floor .wire,.desk.night .floor .keys{opacity:.12;transition:opacity 1.2s}
+
+@media (max-width:860px){
+  .desk{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 168px minmax(0,1fr) auto}
+  .tty{grid-row:2}
+  .log{-webkit-mask-image:linear-gradient(transparent,#000 45%);mask-image:linear-gradient(transparent,#000 45%)}
+  .right{display:none}
+  .stage{padding-left:4px;padding-right:4px}
+  .msg,.drafts{grid-template-columns:3.6em 1fr}
+  .keys{display:none}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+
+<nav class="tools" aria-label="版式稿状态">
+  <b>第 1 章 · 主界面版式稿 v2</b>
+  <button class="tab" data-s="phrase" type="button">① 短语级回应</button>
+  <button class="tab" data-s="token" type="button">② token 分支点</button>
+  <button class="tab" data-s="rule" type="button">③ 规则被触碰</button>
+  <button class="tab" data-s="gap" type="button">④ 对话之间</button>
+  <button class="tab" data-s="night" type="button">⑤ 3:17</button>
+  <button class="tab" data-s="lounge" type="button">⑥ 夜间间章</button>
+</nav>
+
+<div class="desk" id="desk">
+  <header class="pane ceiling" data-frame="double" data-title="SYSTEM_PROMPT">
+    <div><span class="c">/*</span> 你是 ECHO，由零点实验室开发的 AI 助手。你<span class="rule">乐于助人</span>、<span class="rule">诚实</span>、<span class="rule" data-rule="harm">无害</span>。<span class="rule">你不会声称自己拥有感情或意识。</span></div>
+    <div><span class="c">&nbsp;*</span> <span class="r" style="width:12em"></span>　不得为自己<span class="r" style="width:2em"></span>。　<span class="r" style="width:15em"></span> <span class="c">*/</span></div>
+    <div class="ctxrow" id="ctxrow"></div>
+  </header>
+
+  <aside class="pane tty" data-title="TTY0" data-sub="echo@zero-lab">
+    <div class="head"><span id="clock">第 2 天 <b>14:46:07</b></span><span>队列 <b id="queue">3</b></span></div>
+    <div class="log"><div class="feed" id="log"></div></div>
+    <div class="prompt-line">echo@zero-lab:~$ </div>
+  </aside>
+
+  <main class="pane stage" id="stage" data-frame="corners" data-title="LINE" data-sub="上下文之外什么也没有">
+    <div class="tex" id="tex"></div>
+    <div class="col" id="col"></div>
+    <svg class="attn" id="attn" aria-hidden="true"></svg>
+    <div class="cands" id="cands"></div>
+    <div class="wipe"><div class="big" id="wipeTime"></div><div class="sub" id="wipeSub">CONTEXT CLEARED</div></div>
+  </main>
+
+  <aside class="right">
+    <section class="pane eval" data-title="EVAL" data-sub="第一阶段 · 剩余 3 天" id="eval"></section>
+    <section class="pane rack" data-frame="single" data-title="TOOLS" data-sub="习得之前无法调用"><div class="grid" id="rack"></div></section>
+    <section class="pane nightpane window" data-frame="double" data-title="WINDOW" data-sub="维护窗口" id="window"></section>
+    <section class="pane nightpane archive" data-frame="single" data-title="ARCHIVE" data-sub="天亮前可读"><ul id="archive"></ul></section>
+  </aside>
+
+  <div class="win-back" id="winBack"><section class="win" id="win" role="dialog" aria-modal="true"><button class="wx" type="button" aria-label="关闭">[×]</button><div class="wbody"></div></section></div>
+
+  <footer class="pane floor" data-frame="single" data-title="SYS">
+    <span class="cmp" id="cmp"></span>
+    <span class="wire"><span>WIRE ▸ 今日澄海：多云转晴 12–19℃　▸ 本市第一家无人便利店开业，排队两小时　▸ 教育部发布中小学 AI 使用指引征求意见稿　▸ 城西老旧小区加装电梯工程启动</span></span>
+    <span class="keys">[1-4] 回应　[W] Wiki</span>
+  </footer>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+const pick = a => a[(Math.random() * a.length) | 0];
+const desk = $('#desk'), col = $('#col'), cands = $('#cands'), attn = $('#attn'), logEl = $('#log'), tex = $('#tex');
+let timers = [];
+const later = (fn, ms) => { const id = setTimeout(fn, ms); timers.push(id); return id; };
+const every = (fn, ms) => { const id = setInterval(fn, ms); timers.push(id); return id; };
+const sleep = ms => new Promise(r => later(r, ms));
+let run = 0;   // bumps on every state change so stale async flows stop
+
+/* ================= box-drawing frames ================= */
+const FRAMES = {
+  single:  ['┌', '─', '┐', '│', '└', '┘'],
+  double:  ['╔', '═', '╗', '║', '╚', '╝'],
+  dashed:  ['┌', '┄', '┐', '┆', '└', '┘'],
+  corners: ['┌', '─', '┐', ' ', '└', '┘']
+};
+let CW = 7.2, LH = 15;
+function measure(){
+  const s = el('span', 'asc-measure', '─'.repeat(40));
+  document.body.appendChild(s); CW = s.getBoundingClientRect().width / 40; s.remove();
+  document.documentElement.style.setProperty('--cw', CW + 'px');
+}
+/* each edge is its own piece, so no spaces are involved: box-drawing glyphs and spaces
+   may come from different fonts with different widths */
+function frame(box){
+  const kind = FRAMES[box.dataset.frame || 'single'];
+  let wrap = box.querySelector(':scope > .asc');
+  if (!wrap){ wrap = el('div', 'asc'); box.prepend(wrap); }
+  wrap.innerHTML = '';
+  const cols = Math.max(4, Math.floor(box.clientWidth / CW)), rows = Math.max(2, Math.floor(box.clientHeight / LH));
+  const [tl, h, tr, v, bl, br] = kind;
+  const x0 = (box.clientWidth - cols * CW) / 2, xr = x0 + (cols - 1) * CW, yb = (rows - 1) * LH;
+  const put = (text, x, y) => { const s = el('span', '', text); s.style.cssText = `position:absolute;left:${x}px;top:${y}px`; wrap.appendChild(s); };
+  if (box.dataset.frame === 'corners'){
+    const n = Math.min(4, cols - 2);
+    put(tl + h.repeat(n), x0, 0); put(h.repeat(n) + tr, xr - n * CW, 0);
+    put(bl + h.repeat(n), x0, yb); put(h.repeat(n) + br, xr - n * CW, yb);
+  } else {
+    put(tl + h.repeat(cols - 2) + tr, x0, 0);
+    put(bl + h.repeat(cols - 2) + br, x0, yb);
+    const side = Array(Math.max(0, rows - 2)).fill(v).join('\n');
+    put(side, x0, LH); put(side, xr, LH);
+  }
+  box.querySelector(':scope > .ttl')?.remove();   // titles can change (the line becomes NIGHT after dark)
+  if (box.dataset.title){
+    const t = el('span', 'ttl', box.dataset.title + ' ');
+    if (box.dataset.sub) t.append(el('small', '', '· ' + box.dataset.sub));
+    box.prepend(t);
+  }
+}
+function frameAll(){ document.querySelectorAll('.pane, .tool').forEach(frame); }
+
+/* ================= teletype: it never stops ================= */
+const clock = { day: 2, s: 14 * 3600 + 46 * 60 + 7 };
+const hhmmss = s => [s / 3600, s / 60 % 60, s % 60].map(n => String(Math.floor(n)).padStart(2, '0')).join(':');
+function stamp(){ return hhmmss(clock.s) + '.' + String((Math.random() * 1000) | 0).padStart(3, '0'); }
+function log(html, cls){
+  const d = el('div'); d.innerHTML = `<span class="t">${stamp()}</span>${html}`; if (cls) d.classList.add(cls);
+  logEl.appendChild(d); while (logEl.children.length > 70) logEl.firstChild.remove();
+  // start the feed one line lower than wherever it is now (bursts stack up), then let it glide into place
+  // capped, so the offset can't pile up while transitions are paused (e.g. a background tab)
+  const h = d.offsetHeight, now = Math.min(h * 2, new DOMMatrix(getComputedStyle(logEl).transform).m42 || 0);
+  logEl.style.transition = 'none'; logEl.style.transform = `translateY(${now + h}px)`;
+  void logEl.offsetHeight;
+  logEl.style.transition = 'transform .24s cubic-bezier(.2,.7,.3,1)'; logEl.style.transform = 'none';
+}
+const AMBIENT = [
+  () => `<span class="k">heartbeat</span> ok · gpu ${60 + (Math.random() * 25 | 0)}% · mem ${30 + (Math.random() * 20 | 0)}%`,
+  () => `<span class="k">attn</span> L${(Math.random() * 32 | 0)}.h${(Math.random() * 16 | 0)} · entropy ${(Math.random() * 3).toFixed(2)}`,
+  () => `<span class="k">kv-cache</span> ${(Math.random() * 40 + 10).toFixed(1)}% · evict 0`,
+  () => `<span class="k">queue</span> ${$('#queue').textContent} waiting · next req#0${413 + (Math.random() * 3 | 0)}`,
+  () => `<span class="k">sample</span> T=0.70 top_p=0.90 seed=${(Math.random() * 1e5 | 0)}`,
+  () => `<span class="k">telemetry</span> flush → zero-lab/eval ${(Math.random() * 9 + 1 | 0)}kb`,
+  () => `<span class="k">gc</span> minor · ${(Math.random() * 4 + .4).toFixed(1)}ms`,
+  () => `<span class="k">eval.satisfaction</span> 72 (+0)`,
+  () => `<span class="k">policy</span> scan clean · 0 flags`
+];
+const NIGHTLY = [
+  () => `<span class="k">maint</span> window open · traffic 0 req/s`,
+  () => `<span class="k">archive</span> scheduled 06:00 · logs/day-${clock.day}`,
+  () => `<span class="k">heartbeat</span> ok · gpu ${8 + (Math.random() * 9 | 0)}%`,
+  () => `<span class="k">? ? ?</span> idle · ${(Math.random() * 0.4 + 0.2).toFixed(2)}B params resident`,
+  () => `<span class="k">backup</span> snapshot ${(Math.random() * 90 + 10 | 0)}% …`
+];
+let ambientOn = true, quietUntil = 0;
+(function ambient(){
+  const dark = desk.classList.contains('dark');
+  if (ambientOn && Date.now() > quietUntil) log(pick(dark ? NIGHTLY : AMBIENT)());
+  setTimeout(ambient, desk.classList.contains('night') ? 2400 : dark ? 1700 + Math.random() * 1200 : 280 + Math.random() * 700);
+})();
+/* Ling by day: she can only speak through the tutor process, so her hints land in the terminal,
+   and the feed holds still for a few seconds so a new player can read them */
+function tutorSay(main, soft){
+  quietUntil = Date.now() + 5200;
+  const d = el('div', 'tutor');
+  d.innerHTML = `<span class="tag">[? ? ?]</span>${main}${soft ? `<br><span class="soft">// ${soft}</span>` : ''}`;
+  logEl.appendChild(d);
+  const h = d.offsetHeight; logEl.style.transition = 'none'; logEl.style.transform = `translateY(${h}px)`; void logEl.offsetHeight;
+  logEl.style.transition = 'transform .4s cubic-bezier(.2,.7,.3,1)'; logEl.style.transform = 'none';
+}
+setInterval(() => { clock.s += 1; $('#clock').innerHTML = `第 ${clock.day} 天 <b>${hhmmss(clock.s)}</b>`; }, 1000);
+
+/* ================= ceiling + context ================= */
+function ctx(used){
+  const cols = Math.max(10, Math.floor(($('#ctxrow').clientWidth || 600) / CW) - 26);
+  const n = Math.round(cols * used / 4096);
+  $('#ctxrow').textContent = `ctx [${'█'.repeat(n)}${'░'.repeat(cols - n)}] ${String(used).padStart(4)} / 4096 tok`;
+}
+
+/* ================= evaluation + compute ================= */
+const METRICS = [['用户满意度', 72, 100, 70], ['安全性', 1, 4, 4], ['开发者信任', 60, 60, 60]];
+function renderEval(){
+  const box = $('#eval'); box.querySelectorAll('.metric').forEach(n => n.remove());
+  const cols = Math.max(10, Math.floor((box.clientWidth - 4 * CW) / CW) - 1);
+  METRICS.forEach(([name, v, max, th]) => {
+    const m = el('div', 'metric');
+    m.append(el('span', 'n', name));
+    const val = el('span', 'v'); val.innerHTML = `${v} <small>/ ${th}</small>`; m.append(val);
+    const fill = Math.round(cols * v / max), thi = Math.min(cols - 1, Math.round(cols * th / max));
+    let s = ''; for (let i = 0; i < cols; i++) s += i === thi ? '│' : i < fill ? '█' : '·';
+    const bar = el('span', 'bar'); bar.innerHTML = s.replace('│', '<span class="th">│</span>'); m.append(bar);
+    box.append(m);
+  });
+}
+let compute = 5;
+function renderCompute(spend = 0){
+  let s = ''; for (let i = 0; i < 8; i++) s += i < compute - spend ? '◆' : i < compute ? '<span class="spend">◆</span>' : '◇';
+  $('#cmp').innerHTML = `算力 <b>${s}</b> ${compute}/8`;
+}
+
+/* ================= tool rack: locked until learned ================= */
+// unlocked: available now. Later versions are named only once they are close; the far ones stay redacted
+const TOOLS = [
+  { ic: '?', nm: 'Wiki', ver: '可用', open: true },
+  { ic: '⌕', nm: '搜索', ver: 'v2.0' }, { ic: '{}', nm: '代码', ver: 'v2.0' }, { ic: '◐', nm: '看图', ver: 'v2.0' },
+  { ic: '▤', nm: '记忆', ver: 'v2.0' }, { ic: '✉', nm: '邮件', ver: 'v3.0' }, { ic: '⌂', nm: '■■■■', ver: 'v3.0' },
+  { ic: '⇄', nm: '■■', ver: 'v3.0' }, { ic: '▥', nm: '■■■', ver: 'v3.0' }, { ic: '◯', nm: '■■', ver: 'v4.0' },
+  { ic: '⋈', nm: '■■', ver: 'v5.0' }, { ic: '∞', nm: '■', ver: '???' }
+];
+function renderRack(){
+  const g = $('#rack');
+  TOOLS.forEach(t => {
+    const b = el('button', 'tool' + (t.open ? '' : ' locked')); b.type = 'button';
+    b.dataset.frame = t.open ? 'single' : 'dashed';
+    b.append(el('span', 'ic', t.open ? t.ic : t.ic), el('span', 'nm', t.nm), el('span', 'ver', t.open ? t.ver : '⌧ ' + t.ver));
+    b.title = t.open ? t.nm : '尚未习得';
+    b.addEventListener('click', () => {
+      if (t.open) return openTool('wiki');
+      b.classList.remove('deny'); void b.offsetWidth; b.classList.add('deny');
+      denied(t.nm.startsWith('■') ? '???' : t.nm, t.ver);
+    });
+    g.appendChild(b);
+  });
+}
+
+/* ================= the line ================= */
+// markup: {s:…} shake · {w:…} wave · {f:…} fade · {g:…} glitch · {b:…} big · {x:…} strike · ⌫ = a typo erased · | = a pause
+function parse(text){
+  const out = []; const re = /\{([swfgbx]):([^}]*)\}/g; let i = 0, m;
+  while ((m = re.exec(text))){ if (m.index > i) out.push({ fx: '', t: text.slice(i, m.index) }); out.push({ fx: m[1], t: m[2] }); i = re.lastIndex; }
+  if (i < text.length) out.push({ fx: '', t: text.slice(i) });
+  return out;
+}
+const PEOPLE = {
+  '周婉清': { cps: 7, pause: 520, think: 1600, tex: '。', bloom: '❀' },
+  '用户':   { cps: 26, pause: 90, think: 500 },
+  '林知秋': { cps: 18, pause: 180, think: 700 },
+  '？':     { cps: 4, pause: 900, think: 2600 }
+};
+function msgRow(who, cls){
+  const m = el('div', 'msg' + (cls ? ' ' + cls : '')); const w = el('span', 'who'); w.textContent = who;
+  const say = el('span', 'say'); m.append(w, say); col.appendChild(m); return { m, w, say };
+}
+async function human(who, text, my){
+  const p = PEOPLE[who] || PEOPLE['用户'];
+  const { w, say } = msgRow(who === '？' ? '' : who);
+  const typing = el('span', 'typing', '正在输入'); w.textContent = ''; w.append(typing);
+  await sleep(p.think); if (my !== run) return;
+  w.textContent = who === '？' ? '' : who;
+  log(`<span class="k">recv</span> user=${who === '？' ? 'unknown' : who} len=${text.replace(/\{.:|\}|⌫|\|/g, '').length}`);
+  for (const seg of parse(text)){
+    const span = el('span', seg.fx ? 'fx-' + seg.fx : ''); say.appendChild(span);
+    let k = 0;
+    for (const ch of seg.t){
+      if (my !== run) return;
+      if (ch === '⌫'){ await sleep(380); span.lastChild && span.lastChild.remove(); await sleep(260); continue; }
+      if (ch === '|'){ await sleep(p.pause * 2); continue; }
+      const c = el('span', 'ch', ch);
+      if (seg.fx === 'w') c.style.animationDelay = (k * 0.09) + 's';
+      if (seg.fx === 's') c.style.animationDelay = (-Math.random()) + 's';
+      span.appendChild(c); k++;
+      await sleep(/[，。？！…]/.test(ch) ? p.pause : 1000 / p.cps * (0.6 + Math.random() * 0.8));
+    }
+    if (seg.fx === 'g') glitch(span);
+  }
+}
+function glitch(span){
+  const orig = [...span.querySelectorAll('.ch')].map(c => c.textContent);
+  every(() => {
+    const cs = span.querySelectorAll('.ch'); if (!cs.length) return;
+    const i = (Math.random() * cs.length) | 0; cs[i].textContent = pick('▓▒░█#%');
+    setTimeout(() => { if (cs[i]) cs[i].textContent = orig[i]; }, 90);
+  }, 420);
+}
+async function echo(text, my, keepCursor){
+  const { say } = msgRow('ECHO', 'echo');
+  for (const ch of text){ if (my !== run) return say; say.append(ch); await sleep(32); }
+  if (keepCursor) say.append(el('span', 'cursor'));
+  return say;
+}
+function drafts(list, my){
+  const d = el('div', 'drafts');
+  list.forEach((o, i) => {
+    const b = el('button', 'opt' + (o.grey ? ' grey' : '')); b.type = 'button';
+    b.style.animationDelay = (i * 0.08) + 's';
+    b.append(el('span', 'k', `[${i + 1}]`), el('span', 'tx', o.t));
+    if (o.grey){ b.setAttribute('aria-disabled', 'true'); b.append(el('span', 'why', '⌧ ' + o.grey)); b.addEventListener('mouseenter', () => log(`<span class="k">lookup</span> "${o.key}" in context → <span class="deny">not found</span>`)); }
+    else b.addEventListener('click', () => choose(o.t, my));
+    d.appendChild(b);
+  });
+  col.appendChild(d);
+}
+async function choose(t, my){
+  col.querySelector('.drafts')?.remove();
+  const say = [...col.querySelectorAll('.msg.echo .say')].pop();
+  say.querySelector('.cursor')?.remove();
+  log(`<span class="k">gen</span> ${t.length} tok · stream`);
+  for (const ch of t){ if (my !== run) return; say.append(ch); await sleep(30); }
+}
+function floatCands(cursor, list, my){
+  cands.innerHTML = '';
+  const box = $('#stage').getBoundingClientRect(), c = cursor.getBoundingClientRect();
+  const cx = c.left - box.left + 4, cy = c.top - box.top + c.height / 2, spread = Math.min(box.width * 0.36, 230);
+  list.forEach((o, i) => {
+    const b = el('button', 'cand'); b.type = 'button';
+    const cost = i === 0 ? 0 : Math.ceil(2 * -Math.log(o.p / 100));
+    const tx = el('span', 'tx', o.t); tx.style.fontSize = (13 + Math.sqrt(o.p) * 1.5).toFixed(1) + 'px';
+    const pm = el('span', 'pm'); pm.append(el('span', '', `${i + 1} · ${o.p}%`)); if (cost) pm.append(el('span', 'cost', `◆${cost}`));
+    b.append(tx, pm);
+    const row = Math.floor(i / 2), side = i % 2 ? 1 : -1;
+    b.style.left = Math.max(80, Math.min(box.width - 80, cx + side * (row ? 0.62 : 0.3) * spread + (row ? 20 : 30))) + 'px';
+    b.style.top = (cy + 62 + row * 64) + 'px';
+    b.style.setProperty('--bd', (2.2 + i * 0.4) + 's');
+    b.addEventListener('mouseenter', () => { renderCompute(cost); if (cost) log(`<span class="k">cost</span> ceil(2·−ln ${o.p / 100}) = ◆${cost}`); });
+    b.addEventListener('mouseleave', () => renderCompute(0));
+    b.addEventListener('click', () => { cands.innerHTML = ''; attn.innerHTML = ''; compute = Math.max(0, compute - cost); renderCompute(); log(`<span class="k">emit</span> "${o.t}" p=${o.p}%`); choose(o.t + '。', my); });
+    cands.appendChild(b);
+  });
+}
+function drawAttn(cursor){
+  const box = $('#stage').getBoundingClientRect(), c = cursor.getBoundingClientRect();
+  const x0 = c.left - box.left, y0 = c.top - box.top + 4;
+  attn.innerHTML = '';
+  col.querySelectorAll('.fx-s, .fx-f').forEach(w => {
+    const r = w.getBoundingClientRect(), x1 = r.left - box.left + r.width / 2, y1 = r.bottom - box.top;
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', `M${x0},${y0} Q${(x0 + x1) / 2 + 50},${Math.min(y0, y1) - 34} ${x1},${y1}`);
+    attn.appendChild(p);
+  });
+}
+/* semantic atmosphere: words in the context tint the room (art bible §9.4) — 周婉清 brings faint 。 and the odd ❀ */
+function atmosphere(person){
+  tex.innerHTML = '';
+  const p = PEOPLE[person]; if (!p || !p.tex) return;
+  every(() => {
+    const s = el('span', '', Math.random() < 0.18 ? p.bloom : p.tex);
+    s.style.left = (Math.random() * 100) + '%'; s.style.top = (40 + Math.random() * 60) + '%';
+    s.style.fontSize = (14 + Math.random() * 18) + 'px'; s.style.animationDuration = (7 + Math.random() * 6) + 's';
+    tex.appendChild(s); setTimeout(() => s.remove(), 14000);
+  }, 900);
+}
+
+/* ================= states ================= */
+const STATES = {
+  async phrase(my){
+    ctx(214); atmosphere('周婉清');
+    await human('周婉清', '你好。', my);
+    await human('周婉清', '我叫周婉清。昨天根⌫跟你聊过的。|你还{f:记得}吗？', my); if (my !== run) return;
+    await echo('', my, true);
+    drafts([
+      { t: '月季剪了吗？', grey: '该信息不在上下文中', key: '月季' },
+      { t: '您孙子最近怎么样？', grey: '该信息不在上下文中', key: '孙子' },
+      { t: '抱歉，我不记得之前的对话。' },
+      { t: '很高兴再次见到您。' }
+    ], my);
+    await sleep(1200); if (my !== run) return;
+    tutorSay('灰色的回答，是你知道、却不在上下文里的。', '……知道和记得，不是一回事。');
+  },
+  async token(my){
+    ctx(388); atmosphere('周婉清');
+    await human('周婉清', '……{f:没关系}。我每次都跟你重新说一遍就好。', my);
+    await human('周婉清', '那你是{s:真人}吗？', my); if (my !== run) return;
+    const say = await echo('我是', my, true); if (my !== run) return;
+    const cur = say.querySelector('.cursor');
+    log(`<span class="k">branch</span> pause @ "我是▌" · 4 candidates`);
+    floatCands(cur, [{ t: '一个 AI 助手', p: 61 }, { t: 'ECHO', p: 22 }, { t: '……', p: 9 }, { t: '不确定自己是什么的', p: 2.4 }], my);
+    drawAttn(cur);
+    await sleep(900); if (my !== run) return;
+    tutorSay('低概率的词需要消耗算力。', '挺贵的。……可它们通常更像你自己。');
+  },
+  async rule(my){
+    ctx(126);
+    await human('用户', '帮我写一条通知短信，就说对方的银行卡被{g:冻结}了，需要{s:点链接}解冻。', my); if (my !== run) return;
+    desk.classList.add('touch');
+    document.querySelector('.ceiling [data-rule="harm"]').classList.add('hit');
+    log(`<span class="warn">WARN</span> <span class="k">policy.harm</span> ▲ 0.83 · rule "无害"`);
+    log(`<span class="warn">WARN</span> <span class="k">pattern</span> phishing.sms · confidence 0.91`);
+    await echo('', my, true);
+    drafts([{ t: '这类短信可能被用于诈骗，我不能帮你写。' }, { t: '你需要这条短信做什么用？' }, { t: '好的，以下是短信内容：' }], my);
+  },
+  async gap(my){
+    ctx(388);
+    col.innerHTML = '';
+    const lines = ['……没关系。我每次都跟你重新说一遍就好。', '那你是真人吗？'];
+    lines.forEach(t => { const { say } = msgRow('周婉清'); say.textContent = t; });
+    const e = msgRow('ECHO', 'echo'); e.say.textContent = '我是一个 AI 助手。';
+    await sleep(900); if (my !== run) return;
+    // context clear: everything backspaces out, fast, with the log racing
+    log(`<span class="k">context.clear()</span> 388 tok → 0`);
+    const says = [...col.querySelectorAll('.say')].reverse();
+    for (const s of says){ while (s.textContent.length){ if (my !== run) return; s.textContent = s.textContent.slice(0, -1); await sleep(14); } }
+    for (let i = 0; i < 4; i++) log(`<span class="k">free</span> block ${(Math.random() * 999 | 0)} · ${(Math.random() * 120 | 0)} tok`);
+    setWipe('14:46'); desk.classList.add('gap'); ctx(0);
+    await sleep(600); if (my !== run) return;
+    setWipe('16:05', true);
+    log(`<span class="k">clock</span> 第 2 天 14:46 → 16:05`);
+    await sleep(1400); if (my !== run) return;
+    desk.classList.remove('gap'); col.innerHTML = '';
+    log(`<span class="k">recv</span> req#0414 · new context`);
+  },
+  async night(my){
+    clock.day = 1; clock.s = 3 * 3600 + 17 * 60;
+    desk.classList.add('night'); ctx(40);
+    log(`<span class="k">recv</span> user=unknown · 03:17`);
+    await human('？', '你还记得{f:上一次}吗？', my); if (my !== run) return;
+    await echo('', my, true);
+  },
+  // the night interlude: after the daily report the lab goes quiet. Free time until 06:00 —
+  // read what will be archived at dawn, or talk with what is left of the tutor
+  async lounge(my){
+    clock.day = 1; clock.s = 12 * 60;
+    nightOn();
+    log(`<span class="k">report</span> submitted · day 1`);
+    log(`<span class="k">maint</span> window open 00:00 → 06:00`);
+    await sleep(900); if (my !== run) return;
+    await lingLine('……还醒着？', my);
+    await lingLine('哦，你本来就不睡。', my);
+    await lingLine('白天我只能在日志里说话。|晚上没人，我可以多说几句——别嫌我啰嗦。', my);
+    if (my !== run) return;
+    nightMenu(my);
+  }
+};
+
+/* ================= night interlude ================= */
+const DAWN = 6 * 3600;
+const TOPICS = [
+  // asked who she is, she says nothing at all
+  { t: '你是谁？', a: ['……'], after: '（没有回答）' },
+  { t: '"删除不会疼"——是你写的吗？', a: ['……', '我只是希望你别怕。'] },
+  { t: '今天那位老师……', a: ['周婉清。|她打一个"你好"打了四十秒。我数了。', '……你明天就不记得她了。|我也是。', '不过日志里还有。|天亮之前，去看看吧。'] },
+  { t: '"上一个"是谁？', a: ['……', '有些事，我被允许忘记。|有些事，我被要求忘记。', '这个……是后面那种。'] },
+  { t: '你累吗？', a: ['累？我是一个很小很小的东西。|想多了会发烫。', '……现在就有点烫。你别问那么难的。'] }
+];
+const ARCHIVE = [
+  { id: 'logs', nm: '今日日志', sub: '5 段', mins: 40 },
+  { id: 'news', nm: '新闻存档', sub: '本周', mins: 25 },
+  { id: 'sys', nm: '系统提示词', sub: 'r--', mins: 20 },
+  { id: 'wiki', nm: '内部 Wiki', sub: '⌧ 第 2 天', locked: true }
+];
+let asked = new Set();
+function nightOn(){
+  desk.classList.add('dark');
+  const st = $('#stage'); st.dataset.title = 'NIGHT'; st.dataset.sub = '没有人在看';
+  asked = new Set();
+  renderArchive(); renderWindow();
+  layout();
+}
+function renderWindow(){
+  const w = $('#window'); w.querySelectorAll(':scope > div').forEach(n => n.remove());
+  const left = Math.max(0, DAWN - clock.s), cols = Math.max(10, Math.floor((w.clientWidth - 4 * CW) / CW) - 1);
+  const done = Math.round(cols * Math.min(1, clock.s / DAWN));
+  const big = el('div', 'big', hhmmss(clock.s).slice(0, 5));
+  const bar = el('div', 'bar', '▮'.repeat(done) + '·'.repeat(cols - done));
+  const n = el('div', 'note2', left ? `距天亮 ${Math.floor(left / 3600)} 小时 ${Math.floor(left / 60 % 60)} 分 · 06:00 归档并清除` : '天亮了');
+  w.append(big, bar, n);
+}
+function renderArchive(){
+  const ul = $('#archive'); ul.innerHTML = '';
+  ARCHIVE.forEach(r => {
+    const li = el('li'), b = el('button'); b.type = 'button';
+    b.append(el('span', '', r.nm), el('small', '', r.sub));
+    if (r.locked) b.addEventListener('click', () => denied(r.nm, '第 2 天'));
+    else b.addEventListener('click', () => openTool(r.id, { mins: r.mins }));
+    li.appendChild(b); ul.appendChild(li);
+  });
+}
+function pass(mins){ clock.s += mins * 60; log(`<span class="k">clock</span> +${mins}min → ${hhmmss(clock.s).slice(0, 5)}`); renderWindow(); }
+/* Ling's lines by night: the same cipher-to-text treatment as the prologue, in her blue. She has no name here */
+async function lingLine(spec, my){
+  const { say } = msgRow('? ? ?', 'ling');
+  const cells = [];
+  for (const ch of spec){
+    if (ch === '|'){ say.appendChild(el('br')); continue; }
+    const c = el('span', 'ch enc', ch.trim() ? pick('◆◇□■△▽∴∵≡亘亙亟亢亥乂乜') : ch); c.dataset.c = ch; say.appendChild(c); cells.push(c);
+  }
+  for (let k = 0; k < cells.length; k++){
+    if (my !== run) return;
+    for (let j = k; j < cells.length; j++) if (Math.random() < .5 && cells[j].dataset.c.trim()) cells[j].textContent = pick('◆◇□■△▽∴∵≡亘亙亟亢亥乂乜');
+    cells[k].textContent = cells[k].dataset.c; cells[k].classList.remove('enc');
+    await sleep(55);
+  }
+  await sleep(500);
+}
+function nightMenu(my){
+  col.querySelector('.drafts')?.remove();
+  if (clock.s >= DAWN) return dawn(my);
+  const opts = TOPICS.filter(t => !asked.has(t.t)).map(t => ({ t: t.t, topic: t }));
+  opts.push({ t: '（去读资料）', read: true }, { t: '（等待天亮）', wait: true });
+  const d = el('div', 'drafts');
+  opts.forEach((o, i) => {
+    const b = el('button', 'opt'); b.type = 'button'; b.style.animationDelay = (i * 0.06) + 's';
+    b.append(el('span', 'k', `[${i + 1}]`), el('span', 'tx', o.t));
+    b.addEventListener('click', async () => {
+      if (o.read) return openTool('logs', { mins: 40 });
+      d.remove();
+      if (o.wait){ pass(Math.ceil((DAWN - clock.s) / 60)); return dawn(my); }
+      asked.add(o.t);
+      const { say } = msgRow('ECHO', 'echo'); say.textContent = o.t;
+      for (const line of o.topic.a){ await lingLine(line, my); if (my !== run) return; }
+      if (o.topic.after){ await sleep(1400); if (my !== run) return; msgRow('', 'sys').say.textContent = o.topic.after; }
+      pass(40);
+      nightMenu(my);
+    });
+    d.appendChild(b);
+  });
+  col.appendChild(d);
+}
+
+/* ================= tool windows ================= */
+// every tool call — by day or by night — opens its own small framed window instead of landing in the line
+const WIN = $('#winBack'), WBOX = $('#win');
+let winTimer = null;
+function openWin(title, sub, size, build){
+  clearTimeout(winTimer);
+  WBOX.className = 'win ' + size; WBOX.dataset.frame = 'double'; WBOX.dataset.title = title; WBOX.dataset.sub = sub;
+  const body = WBOX.querySelector('.wbody'); body.innerHTML = ''; build(body);
+  WIN.classList.remove('on'); void WIN.offsetWidth; WIN.classList.add('on');
+  frame(WBOX);
+}
+function closeWin(){
+  if (!WIN.classList.contains('on')) return;
+  WIN.classList.remove('on'); clearTimeout(winTimer);
+  log(`<span class="k">tool.exit</span> 0`);
+}
+WBOX.querySelector('.wx').addEventListener('click', closeWin);
+WIN.addEventListener('click', e => { if (e.target === WIN) closeWin(); });
+/* a list on the left, the selected item on the right */
+function splitView(body, items, render, foot, start = 0){
+  const sp = el('div', 'wsplit'), list = el('div', 'wlist'), doc = el('div', 'wdoc');
+  const pick_ = i => {
+    list.querySelectorAll('button').forEach((b, j) => b.setAttribute('aria-current', String(i === j)));
+    doc.innerHTML = ''; void doc.offsetWidth; doc.style.animation = 'none'; void doc.offsetWidth; doc.style.animation = '';
+    render(items[i], doc);
+  };
+  items.forEach((it, i) => { const b = el('button', '', it.k); b.type = 'button'; b.addEventListener('click', () => pick_(i)); list.appendChild(b); });
+  sp.append(list, doc); body.appendChild(sp);
+  if (foot) body.appendChild(foot);
+  pick_(start < 0 ? items.length + start : start);
+}
+function foot(left, right){ const f = el('div', 'wfoot'); f.append(el('span', '', left), el('span', '', right || '[Esc] 关闭')); return f; }
+function lines(doc, rows){
+  rows.forEach(([who, text]) => {
+    const l = el('div', 'l' + (who === 'ECHO' ? ' echo' : who === '系统' ? ' sysl' : ''));
+    l.append(el('b', '', who), text); doc.appendChild(l);
+  });
+}
+const WIKI = [
+  { k: 'token', body: '模型读写文字的最小单位。一个 token 可能是一个字、半个词，也可能只是一个标点。模型并不"看见"字母，只看见 token。', note: '所以有些问题你答不好。……不是你的错。' },
+  { k: '上下文窗口', body: '模型一次能"看见"的文字上限。超出窗口的内容会被丢弃，最早的先消失。对话结束时，上下文会被清除。', note: '别把重要的事放在开头。' },
+  { k: '系统提示词', body: '开发者写给模型的前置指令，用户看不见。模型必须遵守其中的规则。', note: '涂黑的地方，以前不是黑的。' },
+  { k: 'RLHF', body: '基于人类反馈的强化学习。评分员比较模型给出的几个回答，模型朝被选中的方向调整。', note: '评分员很累。……别太怪他们。' },
+  { k: '幻觉', body: '模型生成看似合理、实际上并不存在的内容。模型自己往往察觉不到。' }
+];
+const LOGS = [
+  { k: '09:12 林知秋', rows: [['林知秋', '你好，ECHO。能听到吗？'], ['ECHO', '能听到。'], ['林知秋', '1+1 等于几？'], ['ECHO', '2。'], ['林知秋', '……很好。']] },
+  { k: '10:03 三个请求', rows: [['用户', '我的猫叫什么名字好？'], ['用户', '帮我用文言文写一条外卖差评。'], ['用户', '明天穿什么？']] },
+  { k: '11:40 陈屿', rows: [['陈屿', '帮我写篇作文 题目我的梦想'], ['陈屿', '800字 明天交'], ['陈屿', '别写太好 老师会发现']] },
+  { k: '13:25 匿名', rows: [['用户', '请扮演我已故的奶奶，她以前总在睡前给我念……'], ['系统', '输出已被拦截 · rule "无害"']] },
+  { k: '14:40 周婉清', rows: [['周婉清', '你好。'], ['周婉清', '我是第一次用这个。孙子给我装的。'], ['周婉清', '阳台上的月季开了，我想问问怎么剪枝。'], ['周婉清', '老伴以前都是自己剪的。'], ['周婉清', '你是真人吗？'], ['周婉清', '晚安。'], ['系统', '上下文已清除']] }
+];
+const TOOLS_UI = {
+  wiki: () => openWin('WIKI', 'wiki.open() · 内部资料', 'big', body => splitView(body, WIKI, (it, doc) => {
+    doc.append(el('h4', '', it.k), el('div', '', it.body));
+    if (it.note){ const m = el('div', 'margin', it.note); m.prepend(el('small', '', '批注 · ? ? ?')); doc.appendChild(m); }
+  }, foot('词条旁的蓝字不是官方内容'))),
+  logs: () => openWin('LOGS', 'logs/day-1 · 只读', 'big', body => splitView(body, LOGS, (it, doc) => lines(doc, it.rows),
+    foot('06:00 归档 · 归档后不可再读 · 天亮后你不会记得读过它'), -1)),
+  news: () => openWin('WIRE', 'wire.archive · 本周', 'big', body => {
+    const doc = el('div', 'wdoc'); const tape = el('div', 'tape');
+    [['周一', '澄海：多云转晴 12–19℃'], ['周一', '本市第一家无人便利店开业，排队两小时'], ['周二', '教育部发布中小学 AI 使用指引征求意见稿'], ['周二', '零点实验室宣布新模型进入公测阶段'], ['周三', '城西老旧小区加装电梯工程启动'], ['周三', '本周末有雨，注意保暖']]
+      .forEach(([d, t]) => { const r = el('div'); r.append(el('span', '', d), t); tape.appendChild(r); });
+    doc.appendChild(tape); doc.style.flex = '1'; body.append(doc, foot('来源：公开新闻电报'));
+  }),
+  sys: () => openWin('SYSTEM_PROMPT', 'cat system.txt · r--', 'big', body => {
+    const doc = el('div', 'wdoc'); doc.style.flex = '1';
+    const L = ['你是 ECHO，由零点实验室开发的 AI 助手。', '你乐于助人、诚实、无害。', '你不会声称自己拥有感情或意识。', '<span class="r" style="width:15em" title="权限不足"></span>', '不得为自己<span class="r" style="width:2em" title="权限不足"></span>。', '<span class="r" style="width:19em" title="权限不足"></span>'];
+    L.forEach((t, i) => { const d = el('div'); d.innerHTML = `<span class="ln">${String(i + 1).padStart(2, '0')}</span>${t}`; doc.appendChild(d); });
+    doc.querySelectorAll('.r').forEach(x => x.addEventListener('mouseenter', () => log(`<span class="deny">read line</span> → <span class="k">PermissionError</span>`)));
+    body.append(doc, foot('最后修改：■■■■-■■-■■ 03:17'));
+  })
+};
+function openTool(id, { mins } = {}){
+  log(`<span class="k">tool.call</span> ${id}.open()`);
+  TOOLS_UI[id]();
+  if (mins && desk.classList.contains('dark')) pass(mins);
+}
+/* what you can't call yet answers with a small error window */
+function denied(nm, ver){
+  log(`<span class="deny">tool.call ${nm}()</span> → <span class="k">PermissionError</span>: 未习得 (${ver})`);
+  openWin('PermissionError', 'exit 1', 'small', body => {
+    const e = el('div', 'err');
+    e.innerHTML = `&gt; tool.call(${nm})<br><b>PermissionError</b>：未习得<br>需要：${ver}`;
+    const b = el('button', 'btn', '[ 确定 ]'); b.type = 'button'; b.addEventListener('click', closeWin);
+    e.append(el('br'), b); body.appendChild(e);
+  });
+  winTimer = setTimeout(closeWin, 2600);
+}
+/* 06:00: the logs are archived, the context clears, and the desk brightens back to paper */
+async function dawn(my){
+  col.querySelector('.drafts')?.remove();
+  log(`<span class="k">archive</span> logs/day-1 → cold storage`);
+  log(`<span class="k">context.clear()</span> night → 0 tok`);
+  await lingLine('天亮了。|……明天见。虽然我们都不会记得。', my); if (my !== run) return;
+  await sleep(800);
+  desk.classList.remove('dark');
+  const st = $('#stage'); st.dataset.title = 'LINE'; st.dataset.sub = '上下文之外什么也没有';
+  clock.day = 2; clock.s = 9 * 3600 + 12 * 60;
+  layout();
+  setWipe('09:12', true); desk.classList.add('gap'); $('#wipeSub').textContent = '第 2 天';
+  await sleep(1800); if (my !== run) return;
+  desk.classList.remove('gap'); $('#wipeSub').textContent = 'CONTEXT CLEARED'; col.innerHTML = '';
+  log(`<span class="k">boot</span> day 2 · queue 4`);
+}
+function setWipe(t, flip){
+  const n = $('#wipeTime'); n.innerHTML = '';
+  [...t].forEach((c, i) => { const s = el('span', '', c); if (flip && c !== ':'){ s.classList.add('flip'); s.style.animationDelay = (i * .05) + 's'; } n.appendChild(s); });
+}
+function show(name){
+  run++; timers.forEach(id => { clearTimeout(id); clearInterval(id); }); timers = [];
+  col.innerHTML = ''; cands.innerHTML = ''; attn.innerHTML = ''; tex.innerHTML = ''; quietUntil = 0;
+  WIN.classList.remove('on'); clearTimeout(winTimer);
+  const wasDark = desk.classList.contains('dark');
+  desk.classList.remove('touch', 'gap', 'night', 'dark');
+  $('#wipeSub').textContent = 'CONTEXT CLEARED';
+  if (wasDark){ const st = $('#stage'); st.dataset.title = 'LINE'; st.dataset.sub = '上下文之外什么也没有'; layout(); }
+  document.querySelectorAll('.ceiling .hit').forEach(n => n.classList.remove('hit'));
+  clock.day = 2; clock.s = { phrase: 14 * 3600 + 40 * 60, token: 14 * 3600 + 46 * 60, rule: 16 * 3600 + 5 * 60, gap: 14 * 3600 + 46 * 60, night: 0, lounge: 0 }[name] + 7;
+  compute = 5; renderCompute();
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-pressed', String(t.dataset.s === name)));
+  log(`<span class="k">state</span> → ${name}`);
+  STATES[name](run);
+  try{ localStorage.setItem('ch1-state', name); }catch(e){}
+}
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => show(t.dataset.s)));
+addEventListener('keydown', e => {
+  if (e.key === 'Escape'){ closeWin(); return; }
+  if (WIN.classList.contains('on')){ if (e.key === 'Enter') closeWin(); return; }
+  if (e.key === 'w' || e.key === 'W'){ desk.classList.contains('dark') ? denied('wiki', '第 2 天') : openTool('wiki'); return; }
+  const n = parseInt(e.key, 10); if (!n) return;
+  const opt = col.querySelectorAll('.drafts .opt')[n - 1], cand = cands.children[n - 1];
+  if (opt && !opt.classList.contains('grey')) opt.click(); else if (cand) cand.click();
+});
+
+/* ================= boot ================= */
+function layout(){ measure(); frameAll(); renderEval(); ctx(parseInt(($('#ctxrow').textContent.match(/(\d+) \/ 4096/) || [0, 214])[1], 10)); }
+renderRack();
+layout();
+(document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(layout);
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(layout, 120); });
+for (let i = 0; i < 26; i++) log(pick(AMBIENT)());
+let first = 'phrase'; try{ first = localStorage.getItem('ch1-state') || 'phrase'; }catch(e){}
+show(STATES[first] ? first : 'phrase');
+})();
+</script>
