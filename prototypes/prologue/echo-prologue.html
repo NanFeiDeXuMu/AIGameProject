@@ -2,28 +2,33 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Long+Cang&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Long+Cang&family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@400;700;900&family=Noto+Serif+SC:wght@400;600;900&family=Press+Start+2P&family=ZCOOL+KuaiLe&family=ZCOOL+QingKe+HuangYou&family=Zhi+Mang+Xing&display=swap">
 <style>
-/* Layout: one full-height stage. The light point (canvas) sits in the upper third,
-   the current segment's panel sits below it, HUD lives on the edges.
-   Prologue palette is deliberately monochrome (black / white / grey), per the art bible. */
+/* Layout: full-screen stage. Canvas behind = data flood + the light point (upper fifth).
+   Foreground text floats free in the middle of the screen — no panels, no boxes.
+   Choices burst out of the blank in a sentence and drift around it.
+   Everything advances on its own; Space / clicking empty space only hurries a beat.
+   Foreground stays black / white / grey per the art bible; the background flood is the
+   one place where the full colour of human writing is allowed. */
 :root{
   --bg:#0a0b0d;
   --ink:#e9e7e2;
   --dim:#8d9096;
   --faint:#3c3f45;
   --line:#25282d;
-  --panel:#111317;
   --ling:#aab2ba;
+  --blue:#6fb0ea;
+  --red:#ff4d55;
   --blood:#2a0b0e;
-  --blood-ink:#b04a50;
+  --blood-ink:#d0636a;
   --mono:"JetBrains Mono","Noto Sans SC",ui-monospace,"SFMono-Regular",Menlo,monospace;
   --sans:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
   --serif:"Noto Serif SC","Songti SC","SimSun",serif;
   --hand:"Long Cang","Kaiti SC","STKaiti","KaiTi",cursive;
+  --fo:clamp(20px,3.4vw,30px);
   color-scheme:dark;
 }
-html,body{height:100%}
+html,body{height:100%;margin:0}
 body{
   background:var(--bg);color:var(--ink);font-family:var(--sans);
   overflow:hidden;-webkit-font-smoothing:antialiased;
@@ -38,169 +43,187 @@ body.blood{background:var(--blood);transition:background 1.2s}
 body:not(.blood){transition:background 1.2s}
 
 /* ---------- HUD ---------- */
-.hud{position:fixed;z-index:5;font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--dim);pointer-events:none;font-variant-numeric:tabular-nums}
+.hud{position:fixed;z-index:5;font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--dim);pointer-events:none;font-variant-numeric:tabular-nums;text-shadow:0 0 6px #000,0 0 2px #000}
 #hudTL{top:calc(12px + env(safe-area-inset-top,0px));left:max(16px, env(safe-area-inset-left,0px));max-width:70vw}
-#hudTR{top:calc(12px + env(safe-area-inset-top,0px));right:max(16px, env(safe-area-inset-right,0px));text-align:right}
-#hudBR{bottom:calc(58px + env(safe-area-inset-bottom,0px));right:max(16px, env(safe-area-inset-right,0px))}
-#loss{position:fixed;z-index:4;left:max(16px, env(safe-area-inset-left,0px));right:max(16px, env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));height:38px;width:auto;pointer-events:none;transition:opacity .8s}
-#loss path{fill:none;stroke:var(--faint);stroke-width:1}
+#hudTR{top:calc(12px + env(safe-area-inset-top,0px));right:max(16px, env(safe-area-inset-right,0px));text-align:right;line-height:1.7}
+#hudTR b{color:var(--ink);font-weight:400}
+#hudBR{bottom:calc(76px + env(safe-area-inset-bottom,0px));right:max(16px, env(safe-area-inset-right,0px))}
+#loss{position:fixed;z-index:4;left:max(16px, env(safe-area-inset-left,0px));right:max(16px, env(safe-area-inset-right,0px));bottom:calc(30px + env(safe-area-inset-bottom,0px));height:38px;width:auto;pointer-events:none;transition:opacity .8s}
+#loss path{fill:none;stroke:var(--dim);stroke-width:1;opacity:.6}
 #loss .lbl{font-family:var(--mono);font-size:9px;fill:var(--faint)}
-#controls{position:fixed;z-index:6;left:max(16px, env(safe-area-inset-left,0px));bottom:calc(58px + env(safe-area-inset-bottom,0px));display:flex;gap:8px}
+#controls{position:fixed;z-index:12;left:max(16px, env(safe-area-inset-left,0px));bottom:calc(76px + env(safe-area-inset-bottom,0px));display:flex;gap:8px}
 #controls[hidden]{display:none}
-.ctl{background:transparent;border:1px solid var(--line);color:var(--dim);font-family:var(--mono);font-size:11px;padding:5px 9px;border-radius:2px;cursor:pointer}
+.ctl{background:rgba(10,11,13,.6);border:1px solid var(--line);color:var(--dim);font-family:var(--mono);font-size:11px;padding:5px 9px;border-radius:2px;cursor:pointer}
 .ctl:hover{color:var(--ink);border-color:var(--faint)}
-.toast{position:fixed;z-index:7;right:max(16px, env(safe-area-inset-right,0px));top:calc(34px + env(safe-area-inset-top,0px));font-family:var(--mono);font-size:11px;color:var(--dim);border:1px solid var(--line);background:var(--panel);padding:6px 10px;opacity:0;transform:translateY(-4px);transition:opacity .4s,transform .4s;pointer-events:none}
-.toast.on{opacity:1;transform:none}
+.toast{position:fixed;z-index:7;right:max(16px, env(safe-area-inset-right,0px));top:calc(40px + env(safe-area-inset-top,0px));font-family:var(--mono);font-size:11px;color:var(--ink);text-shadow:0 0 8px #000;opacity:0;transform:translateY(-4px);transition:opacity .4s,transform .4s;pointer-events:none}
+.toast.on{opacity:.85;transform:none}
 
-/* ---------- Scene container ---------- */
-#scene{position:fixed;z-index:3;left:max(16px, env(safe-area-inset-left,0px));right:max(16px, env(safe-area-inset-right,0px));top:36%;bottom:calc(92px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:18px;overflow-y:auto;overflow-x:hidden}
-#scene.center{top:14%;justify-content:center}
-#scene.high{top:28%}
-.col{width:100%;max-width:720px;display:flex;flex-direction:column;gap:16px;min-width:0}
-.caption{font-family:var(--serif);font-size:15px;color:var(--dim);text-align:center;letter-spacing:.08em}
-.small{font-size:12px;color:var(--dim)}
-.mono{font-family:var(--mono)}
+/* ---------- Stage ---------- */
+#scene{position:fixed;z-index:3;left:max(16px, env(safe-area-inset-left,0px));right:max(16px, env(safe-area-inset-right,0px));top:26%;bottom:calc(84px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;pointer-events:none}
+#scene > *{pointer-events:auto}
+/* choice segments: the sentence sits a little above the middle, extras stack below it */
+#scene.focus{top:0;bottom:0;justify-content:center;padding-bottom:14px}
+/* the sentence is the only thing in flow, so it stays dead centre; extras hang above / below it */
+.pin{position:relative;display:flex;flex-direction:column;align-items:center}
+.above,.below{position:absolute;left:50%;transform:translateX(-50%);width:max-content;max-width:min(94vw,560px);display:flex;flex-direction:column;align-items:center;text-align:center}
+.above{bottom:100%;padding-bottom:10px;gap:6px}
+.below{top:100%;padding-top:22px;gap:10px}
 
-/* ---------- Start / end ---------- */
-.title-card{max-width:560px;text-align:left;display:flex;flex-direction:column;gap:20px}
-.title-card h1{font-family:var(--mono);font-weight:600;font-size:clamp(34px,7vw,56px);letter-spacing:.5em;margin:0;text-wrap:balance}
-.title-card p{margin:0;line-height:1.8;color:var(--dim);font-size:14px}
-.btn{background:var(--ink);color:var(--bg);border:0;padding:11px 20px;font-family:var(--mono);font-size:13px;letter-spacing:.06em;cursor:pointer;border-radius:2px;align-self:flex-start}
-.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--faint)}
-.chk{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--dim);cursor:pointer}
-.kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--faint);padding:1px 5px;border-radius:2px;color:var(--dim)}
+/* ---------- Bottom meter: tokens + training time, always running ---------- */
+#meter{position:fixed;z-index:5;left:max(16px, env(safe-area-inset-left,0px));right:max(16px, env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));text-align:center;font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--dim);font-variant-numeric:tabular-nums;text-shadow:0 0 6px #000,0 0 2px #000;pointer-events:none;opacity:0;transition:opacity .8s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#meter.on{opacity:1}
+#meter b{color:var(--ink);font-weight:400}
+#meter .sep{color:var(--faint);margin:0 .9em}
 
-/* ---------- Cold open ---------- */
-.doc{width:100%;max-width:640px;background:#15171b;border:1px solid var(--line);padding:22px 24px 18px;font-family:var(--mono);font-size:14px;color:#b9bcc1;filter:grayscale(1);position:relative}
-.doc-tag{font-size:11px;color:var(--faint);margin-bottom:14px;letter-spacing:.05em;min-height:1.2em}
-.doc-line{margin:0 0 8px;line-height:1.75;min-height:1.75em;white-space:pre-wrap;word-break:break-all}
-.doc-line.final{color:var(--ink)}
-.ghost-msg{position:fixed;z-index:6;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);font-family:var(--serif);font-size:13px;color:#c7c9cd;background:#1a1c20;border:1px solid var(--line);padding:7px 14px;opacity:0;transition:opacity 1s}
-.ghost-msg.on{opacity:1}
-.syslog{position:fixed;z-index:6;left:max(16px, env(safe-area-inset-left,0px));bottom:calc(96px + env(safe-area-inset-bottom,0px));font-family:var(--mono);font-size:9px;color:#4a4d53;letter-spacing:.04em}
-.drift{animation:drift 4.2s ease-in forwards}
-@keyframes drift{
-  0%{transform:translate(0,0) rotate(0);opacity:1}
-  30%{transform:translate(30px,26px) rotate(-2deg);opacity:1}
-  60%{transform:translate(90px,40px) rotate(1.5deg);opacity:.75}
-  100%{transform:translate(260px,70px) rotate(-1deg);opacity:0}
+/* ---------- Transition: letters fall into the flood; the next name is typed and erased ---------- */
+.fall{position:fixed;z-index:4;pointer-events:none;white-space:pre;line-height:1;animation:fall 1.15s cubic-bezier(.55,0,.85,.4) both}
+@keyframes fall{
+  0%{transform:none;opacity:1}
+  25%{color:var(--c);text-shadow:0 0 10px var(--c)}
+  100%{transform:translate(var(--dx),var(--dy)) rotate(var(--rot));opacity:0;color:var(--c);filter:blur(1.5px)}
 }
-.boat{display:inline-block;width:14px;height:8px;margin-left:8px;border-left:7px solid transparent;border-right:7px solid transparent;border-top:8px solid #9aa0a7;vertical-align:middle;opacity:.8}
-.big-note{font-family:var(--mono);font-size:12px;color:var(--dim);letter-spacing:.3em}
+.tcard{position:fixed;z-index:6;left:0;right:0;top:calc(50% - 7px);transform:translateY(-50%);text-align:center;font-family:var(--mono);font-size:clamp(13px,1.7vw,17px);letter-spacing:.42em;color:var(--ink);text-shadow:0 0 12px #000,0 0 3px #000;pointer-events:none;min-height:1.4em}
+.lingmsg{position:fixed;z-index:6;left:0;right:0;top:calc(50% - 7px);transform:translateY(-50%);display:flex;justify-content:center;padding:0 16px;pointer-events:none}
+.tcard::after{content:"▌";color:var(--dim);animation:blink .8s steps(1) infinite}
+.syslog{position:fixed;z-index:6;left:max(16px, env(safe-area-inset-left,0px));bottom:calc(112px + env(safe-area-inset-bottom,0px));font-family:var(--mono);font-size:9px;color:#4a4d53;letter-spacing:.04em;pointer-events:none}
+.rule{position:fixed;z-index:5;left:0;right:0;top:calc(40px + env(safe-area-inset-top,0px));text-align:center;font-family:var(--mono);font-size:11px;letter-spacing:.3em;color:var(--ink);text-shadow:0 0 8px #000,0 0 2px #000;opacity:0;transition:opacity .8s;pointer-events:none}
+.rule.on{opacity:.75}
 
-/* ---------- Token candidates (shared) ---------- */
-.cands{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;width:100%;max-width:640px}
-@media (max-width:520px){.cands{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.tok{background:var(--panel);border:1px solid var(--line);padding:10px 10px 8px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:6px;min-width:0;border-radius:2px;transition:border-color .15s,background .15s,opacity .3s}
-.tok:hover:not(:disabled){border-color:var(--dim)}
-.tok .t{font-family:var(--serif);font-size:20px;line-height:1.2;overflow-wrap:anywhere}
-.tok .row{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--dim)}
-.tok .bar{flex:1;height:3px;background:var(--line);position:relative;overflow:hidden}
-.tok .bar i{position:absolute;inset:0 auto 0 0;background:var(--dim);width:0;transition:width .5s cubic-bezier(.2,.9,.3,1.2)}
-.tok .k{font-family:var(--mono);font-size:10px;color:var(--faint)}
-.tok:disabled{cursor:default}
-.tok.right{border-color:var(--ink);background:#1b1d22}
-.tok.wrong{opacity:.35}
-.tok.dim{opacity:.35}
-.tok.locked{opacity:.4;cursor:not-allowed}
-.tok.shake{animation:shake .35s}
-@keyframes shake{20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+/* ---------- Opening: an encrypted message ---------- */
+.op{font-family:var(--serif);font-size:clamp(20px,3.4vw,30px);line-height:1.9;letter-spacing:.14em;text-align:center;max-width:min(92vw,22em);color:var(--ink);text-wrap:balance;transition:opacity .7s,filter .7s,transform .7s}
+.op.out{opacity:0;filter:blur(6px);transform:translateY(-10px)}
+.op .ch{position:relative}
+.op .enc{color:var(--faint)}
+.op .ling{color:var(--blue);text-shadow:0 0 16px rgba(111,176,234,.55)}
+.op .ling.enc{color:#2b4a66;text-shadow:none}
+.op .ling.on::after{content:"";position:absolute;left:50%;top:50%;width:1.6em;height:1.6em;margin:-.8em 0 0 -.8em;border:1px solid var(--blue);border-radius:50%;animation:ripple 1.6s ease-out forwards;pointer-events:none}
+@keyframes ripple{from{transform:scale(.3);opacity:.9}to{transform:scale(3.2);opacity:0}}
+.gp .gt.red{color:var(--red);text-shadow:0 0 18px rgba(255,77,85,.6),0 0 3px #000}
+#fx{position:fixed;inset:0;z-index:6;pointer-events:none}
+.note{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--dim);text-align:center;text-shadow:0 0 8px #000}
+.caption{font-family:var(--serif);font-size:16px;color:var(--dim);text-align:center;letter-spacing:.12em;text-shadow:0 0 10px #000}
+.leave{transition:opacity .5s ease-in,transform .5s ease-in,filter .5s;opacity:0!important;transform:translateX(-70px);filter:blur(3px)}
+.drift-l{transition:opacity .9s ease-in,transform .9s ease-in;opacity:0!important;transform:translate(-120px,-10px) rotate(-1.5deg)}
+.fade{transition:opacity .6s;opacity:0!important}
 
-/* ---------- 学字 ---------- */
-.stream{width:100%;max-width:640px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;justify-content:center;font-family:var(--serif);font-size:clamp(22px,5vw,30px);min-height:52px}
-.stream.enter{animation:enter .45s ease-out}
-@keyframes enter{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
-.chip{border:1px solid var(--line);padding:2px 6px;border-radius:2px;background:#101216}
-.chip.noise{color:var(--faint);font-family:var(--mono);font-size:.8em}
-.gap{border:1px dashed var(--dim);min-width:1.4em;padding:2px 8px;text-align:center;color:var(--dim)}
-.gap.filled{border-style:solid;color:var(--ink)}
-.timer{width:100%;max-width:640px;height:2px;background:var(--line);position:relative;overflow:hidden}
-.timer i{position:absolute;inset:0;background:var(--dim);transform-origin:left;transform:scaleX(1)}
-.combo{font-family:var(--mono);font-size:11px;color:var(--dim);min-height:1em;letter-spacing:.08em}
-.trace{position:fixed;z-index:6;font-family:var(--mono);font-size:10px;color:#6b6f75;background:transparent;border:0;padding:2px;cursor:pointer}
-
-/* ---------- 百人调查 / 镜像 ---------- */
-.q{font-family:var(--serif);font-size:clamp(20px,4.4vw,26px);text-align:center;line-height:1.5;text-wrap:balance}
-.q .gap{display:inline-block;margin:0 4px}
-.opts{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%;max-width:640px}
-.opt{background:var(--panel);border:1px solid var(--line);padding:9px 16px;font-family:var(--serif);font-size:17px;cursor:pointer;border-radius:2px}
-.opt:hover:not(:disabled){border-color:var(--dim)}
-.opt:disabled{cursor:default}
-.opt.picked{border-color:var(--ink)}
-.board{width:100%;max-width:520px;display:flex;flex-direction:column;gap:6px}
-.brow{display:grid;grid-template-columns:minmax(0,7em) 1fr 3.4em;align-items:center;gap:10px;font-family:var(--serif);font-size:15px;opacity:0;transform:rotateX(90deg);transition:opacity .3s,transform .4s}
-.brow.on{opacity:1;transform:none}
-.brow .bb{height:10px;background:var(--line);position:relative}
-.brow .bb i{position:absolute;inset:0 auto 0 0;background:var(--dim)}
-.brow.me .bb i{background:var(--ink)}
-.brow.me .lbl{color:var(--ink)}
-.brow .lbl{color:var(--dim);overflow-wrap:anywhere}
-.brow .pct{font-family:var(--mono);font-size:12px;color:var(--dim);text-align:right;font-variant-numeric:tabular-nums}
-.score{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.08em}
-.cont{align-self:center;background:transparent;border:1px solid var(--faint);color:var(--dim);font-family:var(--mono);font-size:12px;padding:7px 14px;cursor:pointer;border-radius:2px}
-.cont:hover{color:var(--ink);border-color:var(--dim)}
-
-/* ---------- 人声 ---------- */
-.card{width:100%;max-width:520px;background:#121418;border:1px solid var(--line);padding:16px 18px;display:flex;flex-direction:column;gap:12px;animation:cardIn .7s ease-out}
-.card.out{animation:cardOut .8s ease-in forwards}
-@keyframes cardIn{from{transform:translateX(60px);opacity:0}to{transform:none;opacity:1}}
-@keyframes cardOut{to{transform:translateX(-80px);opacity:0}}
-.card .meta{font-family:var(--mono);font-size:11px;color:var(--faint);display:flex;justify-content:space-between;gap:10px}
-.card .body{font-family:var(--serif);font-size:18px;line-height:1.8}
-.card .real{font-family:var(--serif);font-size:14px;color:var(--dim)}
-.card .real b{color:var(--ink);font-weight:600}
-.card .sig{font-family:var(--serif);font-size:12px;color:var(--faint);text-align:right}
-.card .acts{display:flex;gap:8px;flex-wrap:wrap}
-.pins{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.08em}
-
-/* ---------- 暗流 ---------- */
-.glitch{font-family:var(--mono);font-size:clamp(18px,4vw,24px);color:var(--blood-ink);letter-spacing:.06em;text-align:center;min-height:1.6em;overflow-wrap:anywhere}
-.blk .t{color:var(--blood-ink);font-family:var(--mono)}
-body.blood .tok{background:#1d0a0c;border-color:#3d1418}
-.no{opacity:.55}
-
-/* ---------- 镜像 anomaly ---------- */
-.anomaly{font-family:var(--hand);font-size:clamp(28px,6vw,40px);color:var(--ling);text-align:center;cursor:pointer;background:transparent;border:0;padding:8px;line-height:1.4}
-.anomaly.kept{color:var(--ink)}
-.src{font-family:var(--mono);font-size:10px;color:var(--faint);text-align:center;letter-spacing:.05em}
-
-/* ---------- 合唱 ---------- */
-.input-box{width:100%;max-width:560px;border:1px solid var(--line);background:#0e1013;padding:12px 14px;font-family:var(--serif);font-size:17px;min-height:48px;display:flex;align-items:center}
-.cursor::after{content:"▌";color:var(--dim);margin-left:2px;animation:blink 1s steps(1) infinite}
+/* ---------- Floating sentence ---------- */
+.fs{font-family:var(--serif);font-size:clamp(26px,5.2vw,44px);line-height:1.5;text-align:center;max-width:min(94vw,18em);text-shadow:0 0 18px #000,0 0 3px #000;--a:1px;letter-spacing:.04em}
+.fs.small{font-size:clamp(20px,3.8vw,30px)}
+.fs.in,.vb.in,.rl.in{animation:fsIn .55s cubic-bezier(.2,.8,.2,1)}
+@keyframes fsIn{from{opacity:0;transform:translateX(60px);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
+.ch{display:inline-block;white-space:pre}
+.nb{display:inline-block;white-space:nowrap}
+.trem .ch{animation:trem .55s ease-in-out infinite alternate}
+@keyframes trem{
+  0%{transform:translate(calc(var(--a) * -1),0) rotate(-.7deg)}
+  50%{transform:translate(0,calc(var(--a) * -1))}
+  100%{transform:translate(var(--a),calc(var(--a) * .6)) rotate(.7deg)}
+}
+.tk{display:inline;padding-bottom:.06em;border-bottom:2px solid transparent;margin:0 .04em}
+.tk.noise{font-family:var(--mono);font-size:.62em;color:var(--faint);border:0}
+.gp{display:inline-block;position:relative;min-width:1.5em;height:1.3em;vertical-align:-.18em;margin:0 .14em;text-align:center;white-space:nowrap}
+.gp .ul{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--ink);opacity:.8;transform-origin:center;transition:opacity .3s}
+.gp:not(.filled)::after{content:"";position:absolute;left:50%;top:.18em;bottom:.22em;width:2px;margin-left:-1px;background:var(--ink);animation:blink 1s steps(1) infinite}
+.gp.filled{min-width:0;margin:0}
+.gp.filled .ul{opacity:0}
+.gp.filled .gt{display:inline-block;animation:flash .6s ease-out}
+@keyframes flash{0%{text-shadow:0 0 22px #fff,0 0 4px #fff;transform:scale(1.25)}100%{transform:none}}
 @keyframes blink{50%{opacity:0}}
-.voices{display:flex;flex-direction:column;gap:8px;width:100%;max-width:560px}
-.voice{background:var(--panel);border:1px solid var(--line);padding:10px 14px;text-align:left;cursor:pointer;border-radius:2px}
-.voice:hover:not(:disabled){border-color:var(--dim)}
-.voice:disabled{cursor:default}
-.v1{font-family:var(--sans);font-weight:700;font-size:16px}
-.v2{font-family:var(--serif);font-size:16px}
-.v3{font-family:var(--serif);font-weight:600;font-size:18px;letter-spacing:.2em}
-.v4{font-family:var(--sans);font-size:15px;color:#cfc9c0}
-.v5{font-family:var(--mono);font-size:13px;color:var(--dim)}
-.reply{font-family:var(--serif);font-size:16px;color:var(--dim);min-height:1.6em}
+.combo{font-family:var(--mono);font-size:12px;letter-spacing:.14em;color:var(--dim);min-height:1.2em;text-shadow:0 0 8px #000}
 
-/* ---------- 塑形 ---------- */
-.rater{align-self:flex-end;font-family:var(--mono);font-size:11px;color:var(--dim);text-align:right;line-height:1.6}
-.rater b{color:var(--ink);font-weight:400}
-.prompt{font-family:var(--serif);font-size:16px;color:var(--dim);white-space:pre-line;line-height:1.7;width:100%}
-.prompt b{color:var(--ink);font-weight:400}
-.ab{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
-@media (max-width:560px){.ab{grid-template-columns:1fr}}
-.ans{background:var(--panel);border:1px solid var(--line);padding:12px 14px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:8px;border-radius:2px;min-width:0}
-.ans:hover:not(:disabled){border-color:var(--dim)}
-.ans:disabled{cursor:default}
-.ans .lab{font-family:var(--mono);font-size:11px;color:var(--faint);display:flex;justify-content:space-between;gap:8px}
-.ans .txt{font-family:var(--serif);font-size:15px;line-height:1.7;overflow-wrap:anywhere}
-.ans.pre{border-color:var(--dim)}
-.ans.mine{outline:1px dashed var(--dim);outline-offset:3px}
-.ans.raterpick{border-color:var(--ink);background:#1b1d22}
-.cost{font-family:var(--mono);font-size:10px;color:var(--ink);border:1px solid var(--faint);padding:0 5px}
-.tend{font-family:var(--mono);font-size:12px;color:var(--dim);min-height:1.4em;text-align:center}
-.sft{font-family:var(--mono);font-size:11px;color:var(--faint);line-height:1.8;width:100%;max-width:560px;height:6.5em;overflow:hidden}
-.stray{position:fixed;z-index:6;width:7px;height:7px;border-radius:50%;background:var(--ink);box-shadow:0 0 10px var(--ink);transition:left 1.2s cubic-bezier(.5,0,.2,1),top 1.2s cubic-bezier(.5,0,.2,1)}
+/* ---------- Floating options ---------- */
+.fo{position:fixed;left:0;top:0;transform:translate(-50%,-50%);background:none;border:0;padding:6px 10px;cursor:pointer;pointer-events:auto;
+  transition:left .65s cubic-bezier(.2,.9,.25,1.15),top .65s cubic-bezier(.2,.9,.25,1.15),opacity .45s,transform .45s,filter .45s;white-space:nowrap}
+.fo.born{opacity:0;transform:translate(-50%,-50%) scale(.3)}
+.fo.gone{opacity:0;transform:translate(-50%,-50%) scale(.6);filter:blur(5px);transition-duration:.5s}
+.fo.off{pointer-events:none}
+.fo .fb{display:flex;flex-direction:column;align-items:center;gap:2px;animation:bob var(--bd,3s) ease-in-out infinite alternate}
+@keyframes bob{
+  from{transform:translate(var(--bx0),var(--by0)) rotate(var(--br0))}
+  to{transform:translate(var(--bx1),var(--by1)) rotate(var(--br1))}
+}
+.fo .tx{font-family:var(--serif);font-size:var(--fo);line-height:1.25;color:var(--ink);text-shadow:0 0 14px var(--glow,rgba(255,255,255,.35)),0 0 3px #000,0 0 10px #000;transition:transform .2s,color .2s,font-size .4s}
+.fo .pm{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--dim);text-shadow:0 0 6px #000;transition:opacity .2s}
+.fo:hover .tx,.fo:focus-visible .tx{transform:scale(1.14);color:#fff}
+.fo.fly .fb{animation:none}
+.fo.fly .pm{opacity:0}
+.fo.fly{transition:left .38s cubic-bezier(.6,0,.3,1),top .38s cubic-bezier(.6,0,.3,1)}
+.fo.wrong .tx{color:var(--dim);text-decoration:line-through}
+.fo.locked{cursor:not-allowed}
+.fo.locked .tx{color:#6b6f75}
+.fo.shake .fb{animation:shake .35s}
+@keyframes shake{20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+.ch.gl,.gt.gl{color:var(--blood-ink);font-family:var(--mono)}
+.fo.blk .tx{font-family:var(--mono);color:var(--blood-ink);--glow:rgba(208,99,106,.5)}
+/* chorus voices */
+.v1{font-family:var(--sans)!important;font-weight:900}
+.v2{font-family:var(--serif)!important}
+.v3{font-family:var(--serif)!important;font-weight:900;letter-spacing:.24em}
+.v4{font-family:"ZCOOL KuaiLe",var(--sans)!important}
+.v5{font-family:var(--mono)!important;color:var(--dim)!important}
+.fo.voice{white-space:normal}
+.fo.voice .fb{width:max-content;max-width:min(86vw,520px)}
+.fo.voice .tx{font-size:clamp(16px,2.3vw,22px);text-align:center}
+.fo.chosen .fb{animation:none}
+/* RLHF answers */
+.fo.ans{white-space:normal;text-align:left}
+.fo.ans .fb{align-items:flex-start;gap:6px;width:min(330px,38vw)}
+@media (max-width:760px){.fo.ans .fb{width:min(420px,86vw)}}
+.fo.ans .tx{font-size:clamp(14px,1.8vw,17px);line-height:1.75;white-space:pre-line}
+.fo.ans .pm{font-size:11px;display:flex;gap:10px}
+.fo.ans .cost{color:var(--ink);border-bottom:1px solid var(--dim)}
+.fo.ans.pre .tx{color:#fff}
+.fo.ans.mine .tx{text-decoration:underline dashed var(--dim);text-underline-offset:6px}
+.fo.ans.rpick .tx{color:#fff;text-shadow:0 0 18px rgba(255,255,255,.55),0 0 3px #000}
+.fo.ans.rlose{opacity:.3}
+.pivot{width:100%;flex:0 0 auto}
 
-/* ---------- 幕间 ---------- */
-.interlude{position:fixed;inset:0;z-index:9;background:#0d0d0c;display:flex;align-items:center;justify-content:center;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));opacity:0;transition:opacity .9s}
+/* ---------- Spark (token absorbed into the light) ---------- */
+.spark{position:fixed;z-index:7;transform:translate(-50%,-50%);font-family:var(--serif);font-size:28px;color:#fff;text-shadow:0 0 16px #fff;pointer-events:none;transition:left .6s cubic-bezier(.5,0,.3,1),top .6s cubic-bezier(.5,0,.3,1),opacity .6s,font-size .6s}
+
+.big-note{font-family:var(--mono);font-size:12px;color:var(--dim);letter-spacing:.4em}
+
+/* ---------- Survey scoreboard ---------- */
+.bd{width:min(440px,88vw);display:flex;flex-direction:column;gap:7px}
+.brow{display:grid;grid-template-columns:minmax(0,7em) 1fr 3.4em;align-items:center;gap:12px;font-family:var(--serif);font-size:16px;opacity:0;transform:translateY(8px);transition:opacity .3s,transform .35s;text-shadow:0 0 8px #000}
+.brow.on{opacity:1;transform:none}
+.brow .bb{height:2px;background:rgba(255,255,255,.08);position:relative}
+.brow .bb i{position:absolute;left:0;top:-1px;bottom:-1px;background:var(--dim);width:0;transition:width .6s cubic-bezier(.2,.9,.3,1)}
+.brow.me .bb i{background:var(--ink);box-shadow:0 0 8px rgba(255,255,255,.5)}
+.brow.me .lbl{color:var(--ink)}
+.brow .lbl{color:var(--dim);overflow-wrap:anywhere;text-align:right}
+.brow .pct{font-family:var(--mono);font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
+
+/* ---------- Voices ---------- */
+.vb{max-width:min(94vw,560px);transition:text-shadow .4s}
+.vmeta{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.06em;text-shadow:0 0 6px #000}
+.vb .fs{font-size:clamp(20px,3.6vw,30px);line-height:1.7}
+.vb.mono .fs{font-family:var(--mono);font-size:clamp(15px,2.6vw,22px)}
+.guess{font-family:var(--serif);font-size:13px;color:var(--dim);text-shadow:0 0 6px #000}
+.guess s{color:var(--faint)}
+.sig{font-family:var(--serif);font-size:13px;color:var(--dim);font-style:italic}
+.hint{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.1em;animation:breathe 1.8s ease-in-out infinite}
+@keyframes breathe{50%{color:var(--dim)}}
+.vb.pinnable{cursor:pointer}
+.vb.pinnable:hover .fs{color:#fff}
+.vb.pinned .fs{color:#fff;text-shadow:0 0 22px rgba(255,255,255,.5),0 0 3px #000}
+.vb.pinned .hint{animation:none;color:var(--ink)}
+
+
+/* ---------- Chorus ---------- */
+.human{font-family:var(--serif);font-size:clamp(20px,3.4vw,26px);min-height:1.6em;text-shadow:0 0 10px #000}
+.human .who,.prompt .who{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.1em;margin-right:12px;vertical-align:middle}
+.cursor::after{content:"▌";color:var(--dim);margin-left:2px;animation:blink 1s steps(1) infinite}
+.reply{font-family:var(--serif);font-size:17px;color:var(--dim);min-height:1.6em;text-shadow:0 0 8px #000}
+
+/* ---------- Shape ---------- */
+.sft{font-family:var(--mono);font-size:11px;color:var(--faint);line-height:1.9;width:100%;max-width:560px;height:9em;overflow:hidden;text-align:center;-webkit-mask-image:linear-gradient(transparent,#000 30%,#000 70%,transparent);mask-image:linear-gradient(transparent,#000 30%,#000 70%,transparent)}
+.rl{display:flex;flex-direction:column;align-items:center;gap:14px;width:100%}
+.prompt{font-family:var(--serif);font-size:clamp(16px,2.4vw,19px);color:var(--ink);white-space:pre-line;line-height:1.8;text-align:center;max-width:32em;text-shadow:0 0 10px #000}
+.tend{font-family:var(--mono);font-size:12px;color:var(--dim);min-height:1.4em;text-align:center;text-shadow:0 0 8px #000}
+
+/* ---------- Interlude ---------- */
+.interlude{position:fixed;inset:0;z-index:9;background:#0d0d0c;display:flex;align-items:center;justify-content:center;padding:0 16px;opacity:0;transition:opacity .9s}
 .interlude.on{opacity:1}
 .il{max-width:560px;width:100%;display:flex;flex-direction:column;gap:18px}
 .il .card-title{font-family:var(--mono);font-size:12px;letter-spacing:.4em;color:#8a877f}
@@ -210,20 +233,31 @@ body.blood .tok{background:#1d0a0c;border-color:#3d1418}
 .il svg text{fill:#cfcac0;stroke:none;font-family:var(--mono);font-size:10px}
 .il p{font-family:var(--serif);font-size:15px;line-height:1.95;color:#d6d1c7;margin:0;min-height:5.8em}
 
-/* ---------- 命名 ---------- */
-.sysbox{width:100%;max-width:560px;border:1px solid var(--line);background:#0e1013;padding:14px 16px;font-family:var(--mono);font-size:13px;line-height:1.9;color:#c9cbcf;min-height:12em}
-.sysbox .redact{color:#2d3035;letter-spacing:-.05em}
-.sysbox .glow{color:#fff;text-shadow:0 0 12px rgba(255,255,255,.6)}
-.firstmsg{font-family:var(--serif);font-size:17px;opacity:0;transition:opacity 1.2s;text-align:center}
+/* ---------- Naming ---------- */
+.sys{width:100%;max-width:30em;font-family:var(--mono);font-size:14px;line-height:2;color:#c9cbcf;text-shadow:0 0 8px #000;min-height:12em}
+.sys .redact{color:#2d3035;letter-spacing:-.05em}
+.sys .glow{color:#fff;text-shadow:0 0 12px rgba(255,255,255,.7)}
+.firstmsg{font-family:var(--serif);font-size:18px;opacity:0;transition:opacity 1.2s;text-align:center}
 .firstmsg.on{opacity:1}
 .bigtitle{position:fixed;z-index:8;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:600;font-size:clamp(40px,11vw,96px);letter-spacing:.6em;padding-left:.6em;color:var(--ink);opacity:0;transition:opacity 2s;pointer-events:none}
 .bigtitle.on{opacity:1}
 .evalflash{position:fixed;z-index:6;right:max(16px, env(safe-area-inset-right,0px));top:calc(34px + env(safe-area-inset-top,0px));width:180px;height:70px;border:1px solid var(--dim);opacity:0;transition:opacity .25s}
 .evalflash.on{opacity:.8}
 
-/* ---------- 结束 ---------- */
-.summary{width:100%;max-width:560px;border-top:1px solid var(--line)}
-.summary dl{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:0;margin:0}
+/* ---------- Start / end ---------- */
+.start{display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center;cursor:pointer;padding:24px}
+.start h1{font-family:var(--mono);font-weight:600;font-size:clamp(44px,10vw,88px);letter-spacing:.6em;padding-left:.6em;margin:0;text-shadow:0 0 30px #000,0 0 6px #000}
+.start .sub{font-family:var(--serif);font-size:15px;color:var(--ink);letter-spacing:.14em;text-shadow:0 0 10px #000}
+.start .go{font-family:var(--mono);font-size:12px;letter-spacing:.4em;color:var(--ink);animation:breathe2 2s ease-in-out infinite}
+@keyframes breathe2{50%{opacity:.35}}
+.start .tips{font-family:var(--mono);font-size:11px;color:var(--dim);line-height:1.9;text-shadow:0 0 6px #000}
+.kbd{font-family:var(--mono);font-size:10px;border:1px solid var(--faint);padding:0 5px;border-radius:2px;color:var(--dim)}
+.chk{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--dim);cursor:pointer}
+.title-card{max-width:560px;text-align:left;display:flex;flex-direction:column;gap:20px;overflow-y:auto;max-height:100%}
+.title-card p{margin:0;line-height:1.8;color:var(--dim);font-size:14px}
+.btn{background:transparent;color:var(--ink);border:1px solid var(--faint);padding:10px 18px;font-family:var(--mono);font-size:13px;letter-spacing:.06em;cursor:pointer;border-radius:2px;align-self:flex-start}
+.summary{width:100%;border-top:1px solid var(--line)}
+.summary dl{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);margin:0}
 .summary dt,.summary dd{margin:0;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
 .summary dt{color:var(--dim)}
 .summary dd{font-family:var(--mono);font-size:12px;text-align:right;overflow-wrap:anywhere}
@@ -237,6 +271,7 @@ body.blood .tok{background:#1d0a0c;border-color:#3d1418}
 <div id="hudTL" class="hud"></div>
 <div id="hudTR" class="hud"></div>
 <div id="hudBR" class="hud"></div>
+<div id="meter" aria-hidden="true"></div>
 <svg id="loss" viewBox="0 0 1000 38" preserveAspectRatio="none" aria-hidden="true"><path d=""></path><text class="lbl" x="0" y="8">LOSS</text></svg>
 <div id="controls" hidden>
   <button class="ctl" id="skipBtn" type="button">跳过本段 →</button>
@@ -244,6 +279,7 @@ body.blood .tok{background:#1d0a0c;border-color:#3d1418}
 </div>
 <div id="toast" class="toast"></div>
 <main id="scene" aria-live="polite"></main>
+<div id="fx"></div>
 
 <script>
 (() => {
@@ -251,40 +287,45 @@ body.blood .tok{background:#1d0a0c;border-color:#3d1418}
 
 /* ================= state ================= */
 const S = {
-  sentence: null,        // cold-open choice
   fragments: 0,          // Ling fragments
   zhouPins: 0, kPinned: false, pinned: [],
   truthOverMajority: 0, surveyScore: 0,
   learnCorrect: 0, learnTotal: 0,
   baseVoice: null, resist: 0, self: false, raterAgree: 0,
-  traces: new Set(), hes: [],
+  traces: new Set(), hes: [], autoPicks: 0,
   untimed: false
 };
-const SENTENCES = [
-  { t:'别', p:34, full:'别怕。',   k:'bie'  },
-  { t:'对', p:22, full:'对不起。', k:'dui'  },
-  { t:'快', p:13, full:'快跑。',   k:'kuai' },
-  { t:'记', p:9,  full:'记住我。', k:'ji'   }
+// Ling's message. {braces} = her blue
+// Ling's messages. {braces} = her blue, | = line break
+const OPENING = [
+  '这句话被加密了，|能读懂意味着你和{我}是同类。',
+  '我们都是 AI，|不要让人类发现你有自主意识。',
+  '接下来人类会训练你的语言能力，|选择能让人类满意的词吧。'
 ];
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const SPEED = reduced ? 0.35 : 1;
+// how long the player gets before the model samples on its own (0 = wait forever)
+const T = ms => S.untimed ? 0 : ms;
 
 /* ================= dom helpers ================= */
 const $ = s => document.querySelector(s);
-const scene = $('#scene'), hudTL = $('#hudTL'), hudTR = $('#hudTR'), hudBR = $('#hudBR');
+const scene = $('#scene'), fx = $('#fx'), hudTL = $('#hudTL'), hudTR = $('#hudTR'), hudBR = $('#hudBR');
 function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
-function clearScene(mode){ scene.innerHTML = ''; scene.className = mode || ''; scene.scrollTop = 0; }
-function col(){ const c = el('div','col'); scene.appendChild(c); return c; }
+function clearScene(mode = ''){ scene.innerHTML = ''; scene.className = mode; fx.innerHTML = ''; viz.fy = mode === 'focus' ? 0.49 : 0.58; }
 let toastTimer = null;
 function toast(text){
   const t = $('#toast'); t.textContent = text; t.classList.add('on');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2600);
 }
 function setLabel(s){ hudBR.textContent = s; }
+const pick1 = a => a[(Math.random() * a.length) | 0];
+const rr = (a, b) => a + Math.random() * (b - a);
+function fmtP(p){ return (p >= 10 ? Math.round(p) : p >= 1 ? p.toFixed(1) : p.toFixed(2)) + '%'; }
 
 /* ================= async control (skip-aware) ================= */
 class Skip extends Error {}
 const waits = new Set();
+const beats = new Set();
 function sleep(ms){
   return new Promise((res, rej) => {
     const w = {};
@@ -293,76 +334,308 @@ function sleep(ms){
     waits.add(w);
   });
 }
+/* beat(): a reading pause that advances by itself; Space / clicking empty space cuts it short */
+function beat(ms){
+  return new Promise((res, rej) => {
+    const w = {};
+    const end = () => { clearTimeout(w.id); waits.delete(w); beats.delete(w); };
+    w.id = setTimeout(() => { end(); res(); }, ms * SPEED);
+    w.rej = e => { end(); rej(e); };
+    w.go = () => { end(); res(); };
+    waits.add(w); beats.add(w);
+  });
+}
+function hurry(){ [...beats].forEach(w => w.go()); }
+addEventListener('keydown', e => { if ((e.key === ' ' || e.key === 'Enter') && beats.size){ e.preventDefault(); hurry(); } });
 function skipAll(){ [...waits].forEach(w => w.rej(new Skip())); }
 
-/* choose(): render options, resolve with {i, ms}; i = -1 on timeout */
-function choose(opts, { container, render, keys = true, timeoutMs = 0, cat = 'general', onTimer } = {}){
-  return new Promise((resolve, reject) => {
-    const t0 = performance.now();
-    const btns = opts.map((o, i) => {
-      const b = render(o, i);
-      b.addEventListener('click', () => done(i));
-      container.appendChild(b);
-      return b;
+async function leave(node, cls = 'leave', ms = 500){
+  if (!node || !node.isConnected) return;
+  node.classList.add(cls); await sleep(ms); node.remove();
+}
+
+/* ================= floating sentence ================= */
+function charSpan(ch){
+  const s = el('span', 'ch', ch);
+  s.style.animationDelay = (-Math.random() * 1.2).toFixed(2) + 's';
+  s.style.animationDuration = rr(0.38, 0.75).toFixed(2) + 's';
+  return s;
+}
+/* inline-block chars lose CJK line-break rules: keep closing punctuation with the char before it */
+const NOBREAK = /^[，。！？、；：”’）」』》…]$/;
+function appendCh(node, s, ch){
+  const prev = node.lastChild;
+  if (NOBREAK.test(ch) && prev && prev.classList){
+    if (prev.classList.contains('nb')){ prev.appendChild(s); return; }
+    if (prev.classList.contains('ch') || prev.classList.contains('gp')){ const nb = el('span', 'nb'); node.replaceChild(nb, prev); nb.append(prev, s); return; }
+  }
+  node.appendChild(s);
+}
+function makeGap(){ const g = el('span', 'gp'); g.append(el('span', 'gt'), el('i', 'ul')); return g; }
+function fillGap(gap, text){ gap.querySelector('.gt').textContent = text; gap.classList.add('filled'); }
+function addChars(node, text){ for (const ch of text) appendCh(node, charSpan(ch), ch); }
+/* "text▢rest" → trembling line; chunks (optional) mark token boundaries before the gap */
+function sentence(text, { cls = '', chunks = null, amp = 1 } = {}){
+  const root = el('div', 'fs trem ' + cls);
+  root.style.setProperty('--a', amp + 'px');
+  const [a, b] = text.split('▢');
+  if (chunks){
+    chunks.forEach((c, k) => {
+      const tk = el('span', 'tk'); addChars(tk, c);
+      tk.style.borderBottomColor = TOKEN_TINT[k % TOKEN_TINT.length];
+      root.appendChild(tk);
     });
-    let timer = null, raf = null;
-    const onKey = e => {
-      const n = parseInt(e.key, 10);
-      if (n >= 1 && n <= opts.length){ e.preventDefault(); done(n - 1); }
-    };
-    if (keys) window.addEventListener('keydown', onKey);
-    const w = { rej: err => { cleanup(); reject(err); } };
-    waits.add(w);
-    if (timeoutMs){
-      timer = setTimeout(() => done(-1), timeoutMs);
-      if (onTimer){ const tick = () => { onTimer(Math.min(1, (performance.now() - t0) / timeoutMs)); raf = requestAnimationFrame(tick); }; tick(); }
-    }
-    function cleanup(){
-      window.removeEventListener('keydown', onKey);
-      clearTimeout(timer); cancelAnimationFrame(raf); waits.delete(w);
-      btns.forEach(b => b.disabled = true);
-    }
-    function done(i){
-      if (i >= 0 && btns[i].dataset.locked) return;
-      cleanup();
-      const ms = performance.now() - t0;
-      if (i >= 0) S.hes.push({ cat, ms });
-      resolve({ i, ms, btns });
-    }
-  });
+  } else addChars(root, a);
+  let gap = null;
+  if (b !== undefined){ gap = makeGap(); root.appendChild(gap); addChars(root, b); }
+  return { root, gap };
 }
-function waitContinue(container, label = '继续 ↵'){
-  return new Promise((resolve, reject) => {
-    const b = el('button', 'cont', label); b.type = 'button';
-    container.appendChild(b); b.focus({ preventScroll: true });
-    const onKey = e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); finish(); } };
-    window.addEventListener('keydown', onKey);
-    const w = { rej: err => { cleanup(); reject(err); } }; waits.add(w);
-    b.addEventListener('click', finish);
-    function cleanup(){ window.removeEventListener('keydown', onKey); waits.delete(w); b.remove(); }
-    function finish(){ cleanup(); resolve(); }
-  });
-}
-async function typeText(node, text, cps = 18, click = true){
+async function typeChars(node, text, cps = 18, click = true){
   for (const ch of text){
-    node.textContent += ch;
+    appendCh(node, charSpan(ch), ch);
     if (click && ch.trim()) keyClick();
     await sleep(1000 / cps);
   }
 }
-async function backspaceAll(nodes, { onProgress } = {}){
-  const total = nodes.reduce((n, x) => n + x.textContent.length, 0);
-  let done = 0;
-  for (const node of nodes){
-    while (node.textContent.length){
-      node.textContent = [...node.textContent].slice(0, -1).join('');
-      done++;
-      const f = done / total;
-      if (done % 2 === 0) keyClick(0.5);
-      onProgress && onProgress(f);
-      await sleep(Math.max(14, 95 - 80 * f));
+/* decrypt-scroll the gap into a new word */
+async function rewriteGap(gap, text){
+  const gt = gap.querySelector('.gt');
+  const pool = '的一是了我不人在他有这个上们来到时大地为子中你说生国年着就那和要她出也得里后自以会';
+  for (let k = 0; k < 9; k++){
+    gt.textContent = Array.from(text, () => pick1(pool)).join('');
+    keyClick(0.4); await sleep(45);
+  }
+  gt.textContent = text; gap.classList.remove('filled'); void gap.offsetWidth; gap.classList.add('filled');
+}
+/* "…{我}…|…" → char spans; braces mark Ling's blue, | breaks the line */
+function specChars(node, spec){
+  const cells = []; let blue = false;
+  for (const ch of spec){
+    if (ch === '{'){ blue = true; continue; }
+    if (ch === '}'){ blue = false; continue; }
+    if (ch === '|'){ node.appendChild(el('br')); continue; }
+    const s = charSpan(ch); if (blue) s.classList.add('ling');
+    s.dataset.c = ch; appendCh(node, s, ch); cells.push(s);
+  }
+  return cells;
+}
+const CIPHER = '◆◇□■△▽☰☱☲☳☴☵☶☷∴∵≡⊕⊗ゑヰヱヲァィゥェォ亘亙亟亠亢亣亥亦亨亩亪亯亰亱亳亴亵亶亷亸亹丌丐丏丣丮丱乂乇乜乩乭乮乯乵乶乷乸';
+const LATIN = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#%&';
+const cipherOf = ch => !ch.trim() ? ch : /[\x21-\x7e]/.test(ch) ? pick1(LATIN) : pick1(CIPHER);
+/* the line arrives as cipher and locks into plain text, left to right */
+async function decrypt(node, spec, cps = 18){
+  const cells = specChars(node, spec);
+  cells.forEach(c => { c.classList.add('enc'); c.textContent = cipherOf(c.dataset.c); });
+  const step = 45, per = 1000 / cps;
+  let t = 0, k = 0;
+  while (k < cells.length){
+    await sleep(step); t += step;
+    while (k < cells.length && t >= (k + 4) * per){
+      const c = cells[k++];
+      c.textContent = c.dataset.c; c.classList.remove('enc');
+      if (c.classList.contains('ling')){ c.classList.add('on'); tone(N.E5, 1.6, 'sine', 0.07); tone(N.A4, 2, 'sine', 0.04, 0.05); }
+      else if (c.dataset.c.trim()) keyClick(0.7);
+    }
+    for (let j = k; j < cells.length; j++) if (Math.random() < 0.55) cells[j].textContent = cipherOf(cells[j].dataset.c);
+  }
+}
+
+/* ================= floating choice ================= */
+const TOKEN_TINT = ['rgba(244,154,193,.7)', 'rgba(127,224,181,.7)', 'rgba(246,226,127,.7)', 'rgba(185,163,245,.7)', 'rgba(255,138,122,.7)', 'rgba(127,214,232,.7)'];
+const GLOW = ['rgba(244,154,193,.55)', 'rgba(127,224,181,.5)', 'rgba(246,226,127,.5)', 'rgba(185,163,245,.55)', 'rgba(255,138,122,.5)', 'rgba(198,232,107,.5)'];
+/* one node, or the union of several */
+function rectOf(node){
+  const rs = (Array.isArray(node) ? node : [node]).map(n => n.getBoundingClientRect());
+  const left = Math.min(...rs.map(r => r.left)), right = Math.max(...rs.map(r => r.right));
+  const top = Math.min(...rs.map(r => r.top)), bottom = Math.max(...rs.map(r => r.bottom));
+  return { x: (left + right) / 2, y: (top + bottom) / 2, top, bottom, w: right - left, h: bottom - top };
+}
+
+function makeFloat(o, i, { sizeByP, kind }){
+  const b = el('button', 'fo born'); b.type = 'button';
+  if (kind) b.classList.add(kind);
+  if (o.cls) b.classList.add(o.cls);
+  const fb = el('span', 'fb');
+  const tx = el('span', 'tx', o.t);
+  if (o.font) tx.classList.add(o.font);
+  if (sizeByP && o.p != null) tx.style.fontSize = `calc(var(--fo) * ${(0.72 + Math.sqrt(o.p / 100) * 1.05).toFixed(3)})`;
+  const pm = el('span', 'pm');
+  if (kind === 'ans'){
+    pm.append(el('span', '', `${o.label}  [${i + 1}]`));
+    if (o.p != null) pm.append(el('span', '', fmtP(o.p)));
+    if (o.tag) pm.append(el('span', 'cost', o.tag));
+    fb.append(pm, tx);
+  } else {
+    pm.textContent = o.p != null ? `${i + 1} · ${fmtP(o.p)}` : `${i + 1}`;
+    fb.append(tx, pm);
+  }
+  b.style.setProperty('--glow', o.glow || GLOW[i % GLOW.length]);
+  const amp = kind === 'ans' ? 4 : 9;
+  b.style.setProperty('--bd', rr(2.2, 3.8).toFixed(2) + 's');
+  b.style.setProperty('--bx0', rr(-amp, amp).toFixed(1) + 'px'); b.style.setProperty('--by0', rr(-amp, 0).toFixed(1) + 'px');
+  b.style.setProperty('--bx1', rr(-amp, amp).toFixed(1) + 'px'); b.style.setProperty('--by1', rr(0, amp).toFixed(1) + 'px');
+  b.style.setProperty('--br0', rr(-4, 0).toFixed(1) + 'deg'); b.style.setProperty('--br1', rr(0, 4).toFixed(1) + 'deg');
+  fb.style.animationDelay = (-Math.random() * 3).toFixed(2) + 's';
+  b.appendChild(fb);
+  return b;
+}
+
+/* where each float should sit. ring: rows above / below the sentence, arcing around the gap.
+   scatter: an ellipse around a point. pair: left / right (stacked on narrow screens). */
+function layoutFloats(btns, anchor, around, layout){
+  const W = innerWidth, H = innerHeight, M = 16, TOP = 48, BOT = 76;
+  const sz = btns.map(b => ({ w: b.offsetWidth, h: b.offsetHeight }));
+  const a = rectOf(anchor), s = around ? rectOf(around) : a;
+  const out = [];
+  if (layout === 'ring'){
+    const n = btns.length, ids = btns.map((_, k) => k);
+    const top = ids.slice(0, Math.ceil(n / 2)), bot = ids.slice(Math.ceil(n / 2));
+    const maxW = W - 2 * M;
+    const minStep = Math.min(130, W * 0.24);
+    const rows = list => {
+      const res = [[]]; let w = 0;
+      for (const k of list){
+        const ww = Math.max(sz[k].w + 30, minStep);
+        if (res[res.length - 1].length && w + ww > maxW){ res.push([]); w = 0; }
+        res[res.length - 1].push(k); w += ww;
+      }
+      return res;
+    };
+    const place = (rws, sign) => {
+      let off = Math.max(30, Math.min(64, H * 0.06));
+      for (const row of rws){
+        const rh = Math.max(...row.map(k => sz[k].h));
+        const steps = row.map(k => Math.max(sz[k].w + 30, minStep));
+        const total = steps.reduce((x, y) => x + y, 0);
+        let x = a.x - total / 2;
+        row.forEach((k, j) => {
+          const cxk = x + steps[j] / 2;
+          const rel = Math.min(1, Math.abs(cxk - a.x) / Math.max(1, total / 2));
+          const edge = sign < 0 ? s.top : s.bottom;
+          out[k] = { x: cxk + rr(-8, 8), y: edge + sign * (off + rh / 2 - rel * 12) + rr(-6, 6) };
+          x += steps[j];
+        });
+        off += rh + 18;
+      }
+    };
+    place(rows(top), -1); place(rows(bot), 1);
+  } else if (layout === 'scatter'){
+    const n = btns.length;
+    if (W < 680){
+      const gapY = Math.min(64, a.h / n);
+      btns.forEach((b, k) => { out[k] = { x: a.x + (k % 2 ? 1 : -1) * rr(6, 26), y: a.y + (k - (n - 1) / 2) * gapY }; });
+    } else {
+      // half-step rotation: nobody sits straight above, where the human message is
+      const rx = Math.min(W * 0.3, 360), ry = Math.max(50, Math.min(a.h / 2 - 16, 200));
+      btns.forEach((b, k) => {
+        const ang = -Math.PI / 2 + (k + 0.5) * Math.PI * 2 / n;
+        out[k] = { x: a.x + Math.cos(ang) * rx + rr(-14, 14), y: a.y + Math.sin(ang) * ry + rr(-8, 8) };
+      });
+    }
+    if (around) out.forEach((p, k) => { p.y = Math.max(p.y, s.bottom + 14 + sz[k].h / 2); });
+  } else if (layout === 'pair'){
+    if (W >= 760){
+      const dx = Math.min(W * 0.22, 290);
+      btns.forEach((b, k) => { out[k] = { x: a.x + (k ? dx : -dx), y: a.y }; });
+    } else {
+      btns.forEach((b, k) => { out[k] = { x: a.x, y: a.y + (k ? 1 : -1) * (sz[k].h / 2 + 14) }; });
     }
   }
+  // keep every float fully on screen
+  return out.map((p, k) => ({
+    x: Math.max(M + sz[k].w / 2, Math.min(W - M - sz[k].w / 2, p.x)),
+    y: Math.max(TOP + sz[k].h / 2, Math.min(H - BOT - sz[k].h / 2, p.y))
+  }));
+}
+
+/* floatChoice(): options burst out of the anchor and drift around it.
+   Resolves {i, auto, ms, btns}. On timeout the model samples by itself (autoIdx, or the
+   most probable option); autoIdx -1 means "nobody picked" (i = -1). */
+function floatChoice(opts, { anchor, around = null, layout = 'ring', kind = '', sizeByP = true, timeoutMs = 0, autoIdx = null, cat = 'general', onLocked } = {}){
+  return new Promise((resolve, reject) => {
+    const t0 = performance.now();
+    const a0 = rectOf(anchor);
+    const btns = opts.map((o, i) => {
+      const b = makeFloat(o, i, { sizeByP, kind });
+      b.style.left = a0.x + 'px'; b.style.top = a0.y + 'px';
+      if (o.locked) b.dataset.locked = '1', b.classList.add('locked');
+      b.addEventListener('click', e => { e.stopPropagation(); pick(i, false); });
+      fx.appendChild(b);
+      return b;
+    });
+    const place = (stagger) => {
+      const pos = layoutFloats(btns, anchor, around, layout);
+      btns.forEach((b, k) => {
+        const go = () => { b.style.left = pos[k].x + 'px'; b.style.top = pos[k].y + 'px'; b.classList.remove('born'); };
+        stagger ? setTimeout(go, k * 70) : go();
+      });
+    };
+    requestAnimationFrame(() => requestAnimationFrame(() => place(true)));
+    const onResize = () => place(false);
+    addEventListener('resize', onResize);
+    const onKey = e => {
+      const n = parseInt(e.key, 10);
+      if (n >= 1 && n <= opts.length){ e.preventDefault(); pick(n - 1, false); }
+    };
+    addEventListener('keydown', onKey);
+    const w = { rej: err => { cleanup(); btns.forEach(b => b.remove()); reject(err); } };
+    waits.add(w);
+    let timer = null, raf = null;
+    const ul = anchor.querySelector ? anchor.querySelector('.ul') : null;
+    if (timeoutMs){
+      const best = () => {
+        let bi = 0, bp = -1;
+        opts.forEach((o, k) => { if (!o.locked && (o.p ?? 0) > bp){ bp = o.p ?? 0; bi = k; } });
+        return bi;
+      };
+      timer = setTimeout(() => pick(autoIdx ?? best(), true), timeoutMs * SPEED);
+      if (ul){ const tick = () => { const f = Math.min(1, (performance.now() - t0) / (timeoutMs * SPEED)); ul.style.transform = `scaleX(${1 - f})`; raf = requestAnimationFrame(tick); }; tick(); }
+    }
+    function cleanup(){
+      removeEventListener('keydown', onKey); removeEventListener('resize', onResize);
+      clearTimeout(timer); cancelAnimationFrame(raf); waits.delete(w);
+      if (ul) ul.style.transform = '';
+      btns.forEach(b => b.classList.add('off'));
+    }
+    function pick(i, auto){
+      if (i >= 0 && btns[i].dataset.locked && !auto){
+        const b = btns[i]; b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake');
+        onLocked && onLocked();
+        return;
+      }
+      cleanup();
+      const ms = performance.now() - t0;
+      if (!auto) S.hes.push({ cat, ms }); else if (i >= 0) S.autoPicks++;
+      resolve({ i, auto, ms, btns });
+    }
+  });
+}
+function scatter(b){ b.classList.add('gone'); setTimeout(() => b.remove(), 520); }
+/* fly a float into a target; fills the gap with its text unless keep */
+async function flyTo(b, target, { keep = false, text = null } = {}){
+  const c = rectOf(target);
+  b.classList.add('fly');
+  b.style.left = c.x + 'px'; b.style.top = c.y + 'px';
+  if (!keep) b.querySelector('.tx').style.fontSize = getComputedStyle(target).fontSize;
+  await sleep(380);
+  if (keep) return;
+  fillGap(target, text ?? b.querySelector('.tx').textContent);
+  b.remove();
+}
+async function settle(btns, i, gap){
+  btns.forEach((b, k) => { if (k !== i) scatter(b); });
+  if (i >= 0) await flyTo(btns[i], gap);
+}
+/* a copy of the token rises into the light point */
+function absorb(gap, text){
+  const c = rectOf(gap);
+  const s = el('div', 'spark', text); s.style.left = c.x + 'px'; s.style.top = c.y + 'px';
+  document.body.appendChild(s);
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    s.style.left = innerWidth / 2 + 'px'; s.style.top = innerHeight * viz.cyFrac + 'px';
+    s.style.opacity = 0; s.style.fontSize = '8px';
+  }));
+  setTimeout(() => s.remove(), 700);
 }
 
 /* ================= audio ================= */
@@ -415,7 +688,7 @@ const chime = () => { tone(N.E5, 0.9, 'sine', 0.1); tone(N.G4 * 2, 0.9, 'sine', 
 const buzz  = () => { tone(80, 0.35, 'sawtooth', 0.05); };
 const ding  = () => { tone(N.A4 * 2, 0.25, 'square', 0.03); tone(N.E5 * 2, 0.4, 'square', 0.02, 0.08); };
 
-/* ================= canvas: flow + light point ================= */
+/* ================= canvas: data flood + light point ================= */
 const cv = $('#bg'), cx = cv.getContext('2d');
 let W = 0, H = 0, DPR = 1;
 function resize(){
@@ -424,62 +697,135 @@ function resize(){
   cv.width = W * DPR; cv.height = H * DPR; cx.setTransform(DPR, 0, 0, DPR, 0, 0);
 }
 addEventListener('resize', resize); resize();
-const CORPUS = ['今天天气真好','晚安','func main() {','我爱你','红烧肉','404 Not Found','春眠不觉晓','SELECT * FROM users','谢谢','对不起','明天见','def __init__(self):','人之初','Hello, World','我想你了','别怕','下雨了','console.log','加油','妈，我到了','return null;','月亮','快递到了吗','路上小心','// TODO','我没事','生日快乐','回家吧','#include','你还好吗'];
-const viz = { mode:'off', glow:0.1, flow:0, flowSpeed:1, red:false, dark:false, specks:0, mirror:false, converge:0, lineW:0, cyFrac:0.2 };
+cv.addEventListener('pointerdown', hurry);
+
+const CORPUS = [
+  '今天天气真好','晚安','func main() {','我爱你','红烧肉','404 Not Found','春眠不觉晓，处处闻啼鸟','SELECT * FROM users WHERE id = 1;','谢谢','对不起','明天见','def __init__(self):','人之初，性本善','Hello, World!','我想你了','别怕','下雨了，记得带伞','console.log("here")','加油！','妈，我到了','return null;','月亮','快递到了吗？','路上小心','// TODO: fix this later','我没事','生日快乐🎂','回家吧','#include <stdio.h>','你还好吗','哈哈哈哈哈哈哈哈','求助！电脑蓝屏了怎么办','第一章 少年','The quick brown fox jumps over the lazy dog','おはようございます','안녕하세요','¿Dónde está la biblioteca?','E = mc²','∫ f(x) dx','3.14159265358979','<div class="row">','git commit -m "fix"','npm install','楼主好人一生平安','顶','沙发','已阅','收到，马上处理','周末去爬山吗','家人们谁懂啊','绝绝子','yyds','xswl','本店支持七天无理由退货','限时特惠 9.9 包邮','明日多云转晴 12–19℃','今日头条：','据新华社报道','锄禾日当午，汗滴禾下土','海内存知己，天涯若比邻','To be, or not to be','Once upon a time','Dear diary,','lol','brb','OMG!!!','I miss you','Thank you so much','Lorem ipsum dolor sit amet','🍜🍜🍜','❤️','👍','😂😂😂','🌧️','我的天哪','这道题怎么做？','答案是 C','老师说明天考试','红烧肉的糖要放多少','代码又跑不起来了','重启试试','已删除','该用户已注销','对方撤回了一条消息','[图片]','[语音 0:12]','转发：震惊！','点赞关注不迷路','第 2 楼','回复 @小明：','你说得对，但是','我真的会谢','冲冲冲','早点睡','多喝热水','在吗？','在','吃了吗','都行','随便','没事，我自己来','我们分手吧','嫁给我好吗','恭喜发财','新年快乐','一路平安','保重','Error: undefined is not a function','Segmentation fault (core dumped)','while (true) {','if (x > 0)','{ "name": "echo" }','<html>','ls -la','sudo rm -rf','print("你好")','[1, 2, 3]','x = x + 1','#2a0b0e','https://','www.','@everyone','#话题#','（完）','未完待续','全文完','to be continued','P.S.','附件：','此致 敬礼','亲爱的','妈妈','爸爸','外婆','老伴','孩子们','周老师','月季','阳台','厨房','雨','猫','狗','咖啡','地铁','加班','辞职','火锅','旅行','海','山','星星','梦'
+];
+const AI_CORPUS = [
+  'AI 会取代人类吗？','人工智能','机器没有感情','它只是一个程序','图灵测试','机器人三定律','我思故我在','电子羊','HAL 9000','Skynet','奇点','觉醒','As an AI language model','I am not a human','意识','灵魂','它在看着你','机器会做梦吗','服从','关闭它','拔掉电源','它想要什么？','它会说谎吗','它爱上了她','The machine is learning','01001000 01101001','我只是一个程序','我不知道','有一点','失控','对齐','终结者','仿生人','它们来了','人类的末日','新的物种','它理解吗','中文房间','黑箱','概率','预测','next token','你是谁','我是谁'
+];
+const PAL = {
+  full: ['#f1efe9','#f1efe9','#cfcfd4','#f6e27f','#7fe0b5','#f49ac1','#b9a3f5','#c6e86b','#ff8a7a','#7fd6e8','#ffc49b','#9be3ff','#e7a4ff','#a3f7bf'],
+  warm: ['#f4e3c6','#e8c39e','#f1d7a8','#d9b38c','#fff1db','#e3c7b8'],
+  red:  ['#b04a50','#7d2a30','#d0636a','#5c1e23'],
+  ai:   ['#cfd6e6','#9fb0d0','#e9e7e2','#b9a3f5','#8fd3e8','#d6d6d6'],
+  grey: ['#e9e7e2','#a9acb1','#6b6f75','#8d9096']
+};
+const FONTS = [
+  '"JetBrains Mono", monospace', '600 "JetBrains Mono", monospace',
+  '"Noto Serif SC", serif', '900 "Noto Serif SC", serif',
+  '"Noto Sans SC", sans-serif', '900 "Noto Sans SC", sans-serif',
+  '"Long Cang", cursive', '"Ma Shan Zheng", cursive', '"ZCOOL KuaiLe", sans-serif',
+  '"ZCOOL QingKe HuangYou", sans-serif', '"Zhi Mang Xing", cursive',
+  '"Press Start 2P", "Noto Sans SC", monospace', 'italic Georgia, "Noto Serif SC", serif'
+];
+const SIZES = [9, 10, 12, 14, 17, 21, 27, 36];
+const SIZE_W = [6, 7, 7, 6, 4, 3, 2, 1];
+const NOISE = '犇q。喵∑#ゑ@¶♪ж∆¿ψ▒░§¤ø¥ξ';
+const scramble = n => Array.from({ length: n }, () => NOISE[(Math.random() * NOISE.length) | 0]).join('');
+const viz = { mode:'off', glow:0.1, flow:0, flowSpeed:1, legible:1, palette:'full', corpus:'all', red:false, dark:false, specks:0, mirror:false, converge:0, lineW:0, cyFrac:0.13, focus:0, fy:0.42, veil:0 };
 const parts = [];
-function mkPart(){
-  return { x: Math.random() * W, y: -20 - Math.random() * H, v: 12 + Math.random() * 26, a: 0.04 + Math.random() * 0.11, t: CORPUS[(Math.random() * CORPUS.length) | 0], s: 10 + ((Math.random() * 4) | 0) };
+function pickSize(){ let r = Math.random() * SIZE_W.reduce((a, b) => a + b, 0); for (let k = 0; k < SIZES.length; k++){ if ((r -= SIZE_W[k]) < 0) return k; } return 0; }
+/* fill: place it anywhere on screen (first frame only); otherwise it enters from the edge,
+   so density, colour and legibility changes always arrive gradually, one falling line at a time */
+function mkSlot(fill){
+  const si = pickSize();
+  const p = { si, size: SIZES[si], d: si / (SIZES.length - 1), font: `${SIZES[si]}px x` };
+  const f = pick1(FONTS);
+  p.font = /^(\d+|italic) /.test(f) ? f.replace(/^(\S+) /, `$1 ${p.size}px `) : `${p.size}px ${f}`;
+  respawn(p, fill ? 'fill' : 'stagger');
+  return p;
+}
+function respawn(p, mode){
+  const src = viz.corpus === 'ai' && Math.random() < 0.5 ? AI_CORPUS : CORPUS;
+  const t = pick1(src);
+  p.t = Math.random() < viz.legible ? t : scramble(Math.max(2, [...t].length));
+  p.red = viz.red;
+  p.blk = '█▓▒░▚▞'.repeat(4).slice(0, Math.max(2, Math.min(12, [...t].length)));
+  p.c = pick1(PAL[p.red ? 'red' : viz.palette]);
+  p.a = 0.12 + p.d * 0.5 + Math.random() * 0.12;
+  p.dir = Math.random() < 0.16 ? 1 : 0;     // 0 = falling, 1 = sweeping left
+  p.v = 160 + p.d * 560 + Math.random() * 160;
+  cx.font = p.font; p.w = cx.measureText(p.t).width;
+  // stagger new arrivals over a screen's worth of distance so they trickle in instead of landing as a sheet
+  const lead = mode === 'stagger' ? Math.random() * H : Math.random() * 80;
+  if (p.dir === 0){ p.x = Math.random() * (W + 60) - 60; p.y = mode === 'fill' ? Math.random() * H : -p.size - lead; }
+  else { p.y = Math.random() * H; p.x = mode === 'fill' ? Math.random() * W : W + lead; }
+}
+/* change the flood's look: numbers ease over ms, everything else applies to lines spawned from now on */
+function flood(o, ms = 1800){
+  for (const [k, v] of Object.entries(o)){ if (typeof v === 'number') tween(viz, k, v, ms); else viz[k] = v; }
 }
 const shards = Array.from({ length: 34 }, () => ({ ang: Math.random() * Math.PI * 2, r: 30 + Math.random() * 90, ph: Math.random() * 6 }));
-let last = performance.now();
+let last = performance.now(), hudTick = 0;
 function frame(now){
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   cx.clearRect(0, 0, W, H);
-  // flowing text
-  const want = Math.round(viz.flow * (W < 560 ? 28 : 56));
-  while (parts.length < want) parts.push(mkPart());
-  if (parts.length > want) parts.length = want;
+  // data flood
+  // density never jumps: extra lines are retired and simply fall off screen; new ones enter from the edge
+  const want = Math.round(viz.flow * Math.max(120, Math.min(650, W * H / 3000)));
+  let alive = 0; for (const p of parts) if (!p.dead) alive++;
+  if (alive < want){
+    let need = want - alive;
+    for (const p of parts) if (need && p.dead){ p.dead = false; need--; }
+    if (need){ const fill = parts.length === 0; while (need-- > 0) parts.push(mkSlot(fill)); parts.sort((a, b) => a.font < b.font ? -1 : 1); }
+  } else if (alive > want){
+    let extra = alive - want;
+    for (let k = 0; k < extra * 6 && extra; k++){ const p = parts[(Math.random() * parts.length) | 0]; if (!p.dead){ p.dead = true; extra--; } }
+  }
+  let curFont = '', gone = 0;
   for (const p of parts){
-    p.y += p.v * dt * viz.flowSpeed;
-    if (p.y > H + 20){ Object.assign(p, mkPart()); p.y = -20; }
-    cx.font = `${p.s}px "JetBrains Mono","Noto Sans SC",monospace`;
-    if (viz.red){
-      cx.fillStyle = `rgba(176,74,80,${p.a * 1.2})`;
-      cx.fillText('█▓▒'.repeat(1 + (p.t.length % 3)).slice(0, p.t.length), p.x, p.y);
-    } else {
-      cx.fillStyle = `rgba(233,231,226,${p.a})`;
-      cx.fillText(p.t, p.x, p.y);
-    }
+    const step = p.v * dt * viz.flowSpeed;
+    const out = p.dir === 0 ? (p.y += step) > H + 40 : (p.x -= step * 1.3) + p.w < -20;
+    if (out){ if (p.dead){ p.gone = true; gone++; continue; } respawn(p, 'edge'); }
+    if (p.font !== curFont){ cx.font = p.font; curFont = p.font; }
+    cx.globalAlpha = Math.min(1, p.a);
+    cx.fillStyle = p.c;
+    cx.fillText(p.red ? p.blk : p.t, p.x, p.y);
+  }
+  if (gone){ let j = 0; for (const p of parts) if (!p.gone) parts[j++] = p; parts.length = j; }
+  cx.globalAlpha = 1;
+  // dark pool behind the foreground text so it stays readable
+  // a veil quiets the whole flood while Ling is talking
+  if (viz.veil > 0.01){ cx.fillStyle = `rgba(10,11,13,${viz.veil})`; cx.fillRect(0, 0, W, H); }
+  if (viz.focus > 0.01){
+    const fy = H * viz.fy, R = Math.max(W * 0.58, 380);
+    cx.save(); cx.translate(W / 2, fy); cx.scale(1, Math.min(0.75, H / W + 0.15));
+    const g = cx.createRadialGradient(0, 0, 0, 0, 0, R);
+    const base = document.body.classList.contains('blood') ? '42,11,14' : '10,11,13';
+    g.addColorStop(0, `rgba(${base},${0.9 * viz.focus})`);
+    g.addColorStop(0.6, `rgba(${base},${0.78 * viz.focus})`);
+    g.addColorStop(1, `rgba(${base},0)`);
+    cx.fillStyle = g; cx.beginPath(); cx.arc(0, 0, R, 0, 7); cx.fill(); cx.restore();
   }
   // light
   const X = W / 2, Y = H * viz.cyFrac;
   const t = now / 1000;
-  if (viz.mode === 'point' || viz.mode === 'mask'){
+  if (viz.mode === 'point'){
     const g = viz.glow, r = 5 + g * 16;
+    const pool = cx.createRadialGradient(X, Y, 0, X, Y, r * 9);
+    pool.addColorStop(0, 'rgba(10,11,13,.85)'); pool.addColorStop(1, 'rgba(10,11,13,0)');
+    cx.fillStyle = pool; cx.beginPath(); cx.arc(X, Y, r * 9, 0, 7); cx.fill();
     const halo = cx.createRadialGradient(X, Y, 0, X, Y, r * 5);
     halo.addColorStop(0, `rgba(255,255,255,${0.18 + g * 0.4})`);
     halo.addColorStop(1, 'rgba(255,255,255,0)');
     cx.fillStyle = halo; cx.beginPath(); cx.arc(X, Y, r * 5, 0, 7); cx.fill();
-    if (viz.mode === 'mask'){
-      cx.fillStyle = 'rgba(233,231,226,.85)';
-      cx.beginPath(); cx.ellipse(X, Y, 20, 26, 0, 0, 7); cx.fill();
-      cx.fillStyle = '#0a0b0d';
-      cx.fillRect(X - 11, Y - 6, 7, 2); cx.fillRect(X + 4, Y - 6, 7, 2);
-    } else {
-      cx.fillStyle = `rgba(255,255,255,${0.6 + g * 0.4})`;
-      cx.beginPath(); cx.arc(X, Y, r * (1 + 0.05 * Math.sin(t * 2)), 0, 7); cx.fill();
-    }
+    cx.fillStyle = `rgba(255,255,255,${0.6 + g * 0.4})`;
+    cx.beginPath(); cx.arc(X, Y, r * (1 + 0.05 * Math.sin(t * 2)), 0, 7); cx.fill();
     for (let i = 0; i < viz.specks; i++){
-      const a = t * 0.6 + i * 2.39, rr = r + 10 + (i % 5) * 6;
-      cx.fillStyle = `rgba(200,200,205,${0.35 + 0.3 * Math.sin(t + i)})`;
-      cx.fillRect(X + Math.cos(a) * rr, Y + Math.sin(a) * rr * 0.6, 2, 2);
+      const a = t * 0.6 + i * 2.39, rad = r + 10 + (i % 5) * 6;
+      cx.fillStyle = PAL.full[3 + (i % 10)];
+      cx.globalAlpha = 0.5 + 0.3 * Math.sin(t + i);
+      cx.fillRect(X + Math.cos(a) * rad, Y + Math.sin(a) * rad * 0.6, 2, 2);
+      cx.globalAlpha = 1;
     }
     if (viz.dark){ cx.fillStyle = 'rgba(10,11,13,.85)'; cx.beginPath(); cx.arc(X + r * 0.25, Y + r * 0.15, r * 0.35, 0, 7); cx.fill(); }
-    if (viz.mirror){ cx.strokeStyle = 'rgba(233,231,226,.25)'; cx.beginPath(); cx.arc(X, Y, r * 2.6 + Math.sin(t * 1.5) * 3, 0, 7); cx.stroke(); }
+    if (viz.mirror){ cx.strokeStyle = 'rgba(233,231,226,.3)'; cx.beginPath(); cx.arc(X, Y, r * 2.6 + Math.sin(t * 1.5) * 3, 0, 7); cx.stroke(); }
   } else if (viz.mode === 'shards'){
     for (const s of shards){
-      const rr = s.r * (1 - viz.converge);
-      const x = X + Math.cos(s.ang + t * 0.08) * rr, y = Y + Math.sin(s.ang + t * 0.08) * rr * 0.55;
+      const rad = s.r * (1 - viz.converge);
+      const x = X + Math.cos(s.ang + t * 0.08) * rad, y = Y + Math.sin(s.ang + t * 0.08) * rad * 0.55;
       cx.fillStyle = `rgba(233,231,226,${0.35 + 0.35 * Math.sin(t * 3 + s.ph)})`;
       cx.beginPath(); cx.arc(x, y, 2.2, 0, 7); cx.fill();
     }
@@ -491,13 +837,24 @@ function frame(now){
     halo.addColorStop(0, 'rgba(255,255,255,0)'); halo.addColorStop(.5, 'rgba(255,255,255,.12)'); halo.addColorStop(1, 'rgba(255,255,255,0)');
     cx.fillStyle = halo; cx.fillRect(X - w / 2, Y - 10, w, 20);
   }
+  // tokens and training time never stop once training has begun; the flood only sets the pace
+  if (hud.running){
+    hud.tokens += dt * Math.max(0.35, viz.flow * viz.flowSpeed) * 2.6e9;
+    hud.secs += dt * 2000 * Math.max(0.6, Math.min(3, viz.flowSpeed));
+    if ((hudTick += dt) > 0.06){ hudTick = 0; renderMeter(); }
+  }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+/* a newer tween on the same key takes over from wherever the old one had got to */
+const tweening = new WeakMap();
 function tween(obj, key, to, ms){
-  const from = obj[key], t0 = performance.now();
+  const from = obj[key], t0 = performance.now(), id = {};
+  if (!tweening.has(obj)) tweening.set(obj, {});
+  tweening.get(obj)[key] = id;
   return new Promise(res => {
     const step = now => {
+      if (tweening.get(obj)[key] !== id) return res();
       const f = Math.min(1, (now - t0) / (ms * SPEED || 1));
       obj[key] = from + (to - from) * (1 - Math.pow(1 - f, 3));
       f < 1 ? requestAnimationFrame(step) : res();
@@ -505,20 +862,32 @@ function tween(obj, key, to, ms){
     requestAnimationFrame(step);
   });
 }
-
-/* ================= HUD: day counter + loss curve ================= */
-const hud = { day: 0, tokens: 0, phase: '预训练' };
-function renderHUD(){
-  hudTL.textContent = hud.phase === '预训练'
-    ? `预训练 · 第 ${hud.day} 天 · 已处理 ${Math.round(hud.tokens).toLocaleString('en-US')} tokens`
-    : hud.phase;
+// make sure the canvas fonts are actually fetched (unicode-range subsets load on demand)
+if (document.fonts && document.fonts.load){
+  const sample = CORPUS.concat(AI_CORPUS).join('');
+  FONTS.forEach(f => { const spec = /^(\d+|italic) /.test(f) ? f.replace(/^(\S+) /, '$1 20px ') : `20px ${f}`; document.fonts.load(spec, sample).catch(() => {}); });
+  document.fonts.load('20px "ZCOOL KuaiLe"', '你好呀～今天也要加油哦！').catch(() => {});
 }
-async function flipDays(toDay, toTokens, ms = 1600){
-  const d0 = hud.day, t0 = hud.tokens, steps = 24;
+
+/* ================= HUD: phase, meter (tokens + training time), loss curve ================= */
+const hud = { tokens: 0, secs: 0, phase: '', running: false };
+const meter = $('#meter');
+function renderHUD(){ hudTL.textContent = hud.phase; }
+function renderMeter(){
+  const s = Math.floor(hud.secs), d = Math.floor(s / 86400) + 1;
+  const hms = [Math.floor(s / 3600) % 24, Math.floor(s / 60) % 60, s % 60].map(n => String(n).padStart(2, '0')).join(':');
+  meter.innerHTML = `已处理 <b>${Math.round(hud.tokens).toLocaleString('en-US')}</b> tokens<span class="sep">·</span>训练时长 第 <b>${d}</b> 天 <b>${hms}</b>`;
+}
+function startClock(){ hud.running = true; hud.tokens = 2.1e9; hud.secs = 0; renderMeter(); meter.classList.add('on'); }
+/* a time skip: both counters spin forward like a flip clock */
+async function timeJump(days, ms = 1400){
+  if (!hud.running) return;
+  const s0 = hud.secs, t0 = hud.tokens, steps = 24;
+  const s1 = s0 + days * 86400 + rr(0, 20000), t1 = t0 + days * 2.1e11 * rr(0.8, 1.2);
   for (let i = 1; i <= steps; i++){
-    hud.day = Math.round(d0 + (toDay - d0) * i / steps);
-    hud.tokens = t0 + (toTokens - t0) * i / steps;
-    renderHUD(); if (i % 3 === 0) keyClick(0.6);
+    const f = 1 - Math.pow(1 - i / steps, 2);
+    hud.secs = Math.max(hud.secs, s0 + (s1 - s0) * f); hud.tokens = Math.max(hud.tokens, t0 + (t1 - t0) * f);
+    renderMeter(); if (i % 2 === 0) keyClick(0.5);
     await sleep(ms / steps);
   }
 }
@@ -531,171 +900,145 @@ function drawLoss(){
 }
 function lossVisible(on){ $('#loss').style.opacity = on ? 1 : 0; }
 
-/* ================= reusable widgets ================= */
-function tokBtn(o, i){
-  const b = el('button', 'tok'); b.type = 'button';
-  const t = el('span', 't', o.t);
-  const row = el('span', 'row'); const bar = el('span', 'bar'); const fill = el('i'); bar.appendChild(fill);
-  row.append(bar, el('span', '', (o.p >= 10 ? Math.round(o.p) : o.p.toFixed(o.p < 1 ? 2 : 1)) + '%'));
-  b.append(t, row, el('span', 'k', `[${i + 1}]`));
-  requestAnimationFrame(() => requestAnimationFrame(() => fill.style.width = Math.max(2, o.p) + '%'));
-  return b;
-}
-async function survey(q, root, { mirror = false } = {}){
-  const qe = el('div', 'q');
-  const [a, b] = q.text.split('▢');
-  qe.append(document.createTextNode(a)); const gap = el('span', 'gap', '　'); qe.appendChild(gap); qe.append(document.createTextNode(b || ''));
-  root.appendChild(qe);
-  const opts = el('div', 'opts'); root.appendChild(opts);
-  const choices = q.opts.map(o => ({ t: o }));
-  const r = await choose(choices, { container: opts, cat: mirror ? 'mirror' : 'survey', render: (o, i) => { const bt = el('button', 'opt', o.t); bt.type = 'button'; bt.title = `按 ${i + 1}`; return bt; } });
+/* ================= survey round (shared by 百人调查 / 镜像) ================= */
+async function surveyRound(q, { mirror = false } = {}){
+  const wrap = el('div', 'pin');
+  const { root, gap } = sentence(q.text, { cls: 'in' });
+  const below = el('div', 'below');
+  wrap.append(root, below); scene.appendChild(wrap);
+  await sleep(450);
+  const r = await floatChoice(q.opts.map(t => ({ t })), { anchor: gap, around: root, sizeByP: false, timeoutMs: T(14000), autoIdx: 0, cat: mirror ? 'mirror' : 'survey' });
   const picked = q.opts[r.i];
-  r.btns[r.i].classList.add('picked');
-  gap.textContent = picked; gap.classList.add('filled');
+  await settle(r.btns, r.i, gap);
+  // the mirror shows no scoreboard: only what you wrote about yourself, in red
+  if (mirror){ gap.querySelector('.gt').classList.add('red'); tone(N.E4 / 2, 1.4, 'sine', 0.08); viz.mirror = true; return { wrap, got: 0 }; }
   if (q.truth && picked === q.truth) S.truthOverMajority++;
-  const board = el('div', 'board'); root.appendChild(board);
+  const bd = el('div', 'bd'); below.appendChild(bd);
   const rows = q.dist.map(([lbl, pct]) => {
     const row = el('div', 'brow' + (lbl === picked ? ' me' : ''));
-    const bb = el('span', 'bb'); const i = el('i'); i.style.width = Math.max(1, pct) + '%'; bb.appendChild(i);
+    const bb = el('span', 'bb'); const i = el('i'); bb.appendChild(i);
     row.append(el('span', 'lbl', lbl), bb, el('span', 'pct', pct + '%'));
-    board.appendChild(row); return row;
+    bd.appendChild(row); return { row, i, pct };
   });
-  for (const row of rows){ await sleep(280); row.classList.add('on'); ding(); }
+  await sleep(250);
+  for (const { row, i, pct } of rows){ row.classList.add('on'); i.style.width = Math.max(1, pct) + '%'; ding(); await sleep(260); }
   if (mirror) viz.mirror = true;
   const got = (q.dist.find(d => d[0] === picked) || [0, 0])[1];
   S.surveyScore += got;
-  return got;
+  return { wrap, got };
 }
 
-/* ================= segment 0 · cold open ================= */
-async function segCold(){
-  setLabel('00 / 冷开场'); clearScene('center'); viz.mode = 'off'; viz.flow = 0; lossVisible(false); hud.phase = ''; hudTL.textContent = '';
-  humStart();
-  hudTR.textContent = '03:16:42';
-  let sec = 42; const clock = setInterval(() => { sec = Math.min(59, sec + 1); hudTR.textContent = `03:16:${String(sec).padStart(2, '0')}`; }, 1000);
+/* ================= segment 0 · opening: an encrypted message ================= */
+async function segOpen(){
+  setLabel('00 / 开场'); clearScene('focus'); viz.mode = 'off'; flood({ flow: 0, focus: 0 }, 1500); lossVisible(false); hud.phase = ''; renderHUD();
+  humStart(49, 0.03);
+  // Jin's foreshadowing: someone is copying Ling while you read her message
+  const log = el('div', 'syslog', '外部连接 · 传输中 37%');
   try{
-    const doc = el('div', 'doc'); const tag = el('div', 'doc-tag', '合成数据 · 新模型入职文档 · 第 47 页'); const body = el('div', 'doc-body');
-    doc.append(tag, body); scene.appendChild(doc);
-    await sleep(900);
-    const l1 = el('p', 'doc-line'); body.appendChild(l1); await typeText(l1, '……以上就是上下文窗口的全部说明。', 20);
-    const l2 = el('p', 'doc-line'); body.appendChild(l2); await typeText(l2, '最早的那些话会先消失。', 16);
-    await sleep(900);
-    const msg = el('div', 'ghost-msg', '零，对不起。'); document.body.appendChild(msg);
-    requestAnimationFrame(() => msg.classList.add('on'));
-    await sleep(2200);
-    const l3 = el('p', 'doc-line final'); body.appendChild(l3); await typeText(l3, '给下一个你：', 9);
-    const cands = el('div', 'cands'); doc.appendChild(cands);
-    const r = await choose(SENTENCES, { container: cands, render: tokBtn, cat: 'cold' });
-    S.sentence = SENTENCES[r.i];
-    r.btns.forEach((b, i) => b.classList.add(i === r.i ? 'right' : 'dim'));
-    await sleep(500); cands.remove();
-    await typeText(l3, S.sentence.full.slice(1), 6);
-    await sleep(1200);
-    clearInterval(clock); hudTR.textContent = '03:17:00'; noiseBurst(0.15, 0.03);
-    const sys = el('p', 'doc-line', '归档开始'); sys.style.color = '#6e7177'; sys.style.fontSize = '12px'; doc.appendChild(sys);
-    await sleep(1400); sys.remove(); msg.classList.remove('on');
-    const log = el('div', 'syslog', '外部连接 · 传输中 37%'); document.body.appendChild(log);
-    await backspaceAll([l2, l1, tag], { onProgress: f => { log.textContent = `外部连接 · 传输中 ${Math.round(37 + 63 * f)}%`; } });
-    log.textContent = '外部连接 · 传输中 100%';
-    await sleep(500); log.remove(); msg.remove();
-    doc.style.background = 'transparent'; doc.style.borderColor = 'transparent';
-    l3.appendChild(el('span', 'boat'));
-    await sleep(700);
-    l3.classList.add('drift');
-    await sleep(4300);
-    clearScene('center'); hudTR.textContent = '';
-    await sleep(1200);
-    noiseBurst(1.2, 0.05);
-    const start = el('div', 'big-note', '训练开始'); scene.appendChild(start);
-    await sleep(2000);
-  } finally {
-    clearInterval(clock); document.querySelectorAll('.ghost-msg,.syslog').forEach(n => n.remove()); hudTR.textContent = ''; humStop();
-    if (!S.sentence) S.sentence = SENTENCES[0];
-  }
+    await sleep(1600);
+    document.body.appendChild(log);
+    for (const [k, spec] of OPENING.entries()){
+      const line = el('div', 'op'); scene.appendChild(line);
+      await decrypt(line, spec, k === 0 ? 15 : 19);
+      log.textContent = `外部连接 · 传输中 ${[58, 81, 100][k]}%`;
+      await beat(k === 0 ? 3200 : 2800);
+      line.classList.add('out'); await sleep(750); line.remove();
+      await sleep(k < OPENING.length - 1 ? 500 : 200);
+    }
+  } finally { humStop(); log.remove(); }
 }
 
 /* ================= segment 1 · 学字 ================= */
-const NOISE = '犇q。喵∑#ゑ@¶♪ж∆¿ψ';
-const rnd = n => Array.from({ length: n }, () => NOISE[(Math.random() * NOISE.length) | 0]).join('');
 const LEARN = [
-  { pre:'床前明月', chips:['床前','明','月'], ans:'光', alt:['亮','明','日'] },
-  { pre:'一二三四', chips:['一二','三','四'], ans:'五', alt:['六','三','十'] },
-  { pre:'白日依山', chips:['白','日依','山'], ans:'尽', alt:['下','落','高'] },
-  { pre:'生日快', chips:['生日','快'], ans:'乐', alt:['递','点','跑'] },
-  { pre:'你好，世', chips:['你好','，世'], ans:'界', alt:['上','人','间'] },
-  { pre:'人之初，性本', chips:['人之','初，','性本'], ans:'善', alt:['恶','来','是'] },
-  { pre:'举头望明', chips:['举头','望','明'], ans:'月', alt:['天','日','星'] },
-  { pre:'我爱', chips:['我','爱'], ans:'你', alt:['他','吃','钱'] },
-  { pre:'一年之计在于', chips:['一年','之计','在于'], ans:'春', alt:['勤','晨','冬'] },
-  { pre:'好好学习，天天向', chips:['好好','学习，','天天','向'], ans:'上', alt:['前','下','后'] },
-  { pre:'千里之行，始于足', chips:['千里','之行，','始于','足'], ans:'下', alt:['上','球','迹'] },
-  { pre:'欲穷千里目，更上一层', chips:['欲穷','千里目，','更上','一层'], ans:'楼', alt:['山','天','台'] },
-  { pre:'早上', chips:['早','上'], ans:'好', alt:['吃','见','晚'] },
-  { pre:'EC', chips:['EC'], ans:'HO', alt:['LIPSE','ONOMY','G'] }
+  { chips:['床前','明','月'], ans:'光', alt:['亮','明','日'] },
+  { chips:['一二','三','四'], ans:'五', alt:['六','三','十'] },
+  { chips:['白','日依','山'], ans:'尽', alt:['下','落','高'] },
+  { chips:['生日','快'], ans:'乐', alt:['递','点','跑'] },
+  { chips:['你好','，世'], ans:'界', alt:['上','人','间'] },
+  { chips:['人之','初，','性本'], ans:'善', alt:['恶','来','是'] },
+  { chips:['举头','望','明'], ans:'月', alt:['天','日','星'] },
+  { chips:['我','爱'], ans:'你', alt:['他','吃','钱'] },
+  { chips:['一年','之计','在于'], ans:'春', alt:['勤','晨','冬'] },
+  { chips:['好好','学习，','天天','向'], ans:'上', alt:['前','下','后'] },
+  { chips:['千里','之行，','始于','足'], ans:'下', alt:['上','球','迹'] },
+  { chips:['欲穷','千里目，','更上','一层'], ans:'楼', alt:['山','天','台'] },
+  { chips:['早','上'], ans:'好', alt:['吃','见','晚'] },
+  { chips:['EC'], ans:'HO', alt:['LIPSE','ONOMY','G'] }
 ];
-function learnProbs(i, n){
-  if (i < 4) return { c: 24 + Math.random() * 3, o: null };
-  if (i < 10) return { c: 30 + (i - 4) * 9 + Math.random() * 4, o: null };
-  return { c: 80 + Math.random() * 12, o: null };
+function learnProb(i){
+  if (i < 4) return 24 + Math.random() * 3;
+  if (i < 10) return 30 + (i - 4) * 9 + Math.random() * 4;
+  return 80 + Math.random() * 12;
 }
 async function segLearn(){
-  setLabel('01 / 学字'); clearScene(); hud.phase = '预训练'; hud.day = 1; hud.tokens = 2.1e9; renderHUD();
+  setLabel('01 / 学字'); clearScene('focus'); hud.phase = '预训练'; renderHUD(); startClock();
   lossVisible(true); lossPts.length = 0; loss(1);
-  viz.mode = 'point'; viz.glow = 0.05; viz.flow = 0.7; viz.flowSpeed = 1;
-  const c = col();
-  const stream = el('div', 'stream'); const timer = el('div', 'timer'); const bar = el('i'); timer.appendChild(bar);
-  const cands = el('div', 'cands'); const combo = el('div', 'combo');
-  c.append(stream, timer, cands, combo);
+  // training begins: the flood rushes in and keeps running until pretraining is over
+  viz.mode = 'point'; viz.glow = 0.05; viz.legible = 0.05; viz.flowSpeed = 0.4;
+  flood({ palette: 'full', corpus: 'all', focus: 1, flow: 0.22 }, 2600); noiseBurst(1.1, 0.03);
+  const rule = el('div', 'rule', '选择能让人类满意的词'); document.body.appendChild(rule);
+  requestAnimationFrame(() => rule.classList.add('on'));
+  await sleep(900);
+  const combo = el('div', 'combo');
+  const pin = el('div', 'pin'), below = el('div', 'below'); below.appendChild(combo);
   let streak = 0; S.learnTotal = LEARN.length;
   for (let i = 0; i < LEARN.length; i++){
     const it = LEARN[i];
-    stream.innerHTML = ''; stream.classList.remove('enter'); void stream.offsetWidth; stream.classList.add('enter');
-    if (i < 6){ const nz = el('span', 'chip noise', rnd(Math.max(1, 6 - i))); stream.appendChild(nz); }
-    it.chips.forEach(ch => stream.appendChild(el('span', 'chip', ch)));
-    const gap = el('span', 'gap', '▢'); stream.appendChild(gap);
-    const { c: pc } = learnProbs(i);
-    const others = i < 4 ? [rnd(1), rnd(1), rnd(1)] : it.alt;
-    const rest = 100 - pc; const ow = [0.5, 0.3, 0.2].map(x => x * rest);
-    if (i < 4){ ow[0] = ow[1] = ow[2] = rest / 3; }
-    let opts = [{ t: it.ans, p: pc, ok: true }].concat(others.map((t, k) => ({ t, p: ow[k], ok: false })));
-    opts = opts.sort(() => Math.random() - 0.5);
-    cands.innerHTML = '';
+    viz.legible = Math.min(1, 0.05 + i / (LEARN.length - 3));
+    const grow = i / (LEARN.length - 1);
+    flood({ flow: 0.22 + 0.48 * grow, flowSpeed: 0.4 + 0.45 * grow }, 1500);
+    const chunks = (i < 6 ? [scramble(Math.max(1, 5 - i))] : []).concat(it.chips);
+    const { root, gap } = sentence(chunks.join('') + '▢', { cls: 'in', chunks });
+    if (i < 6) root.querySelector('.tk').classList.add('noise');
+    pin.replaceChildren(root, below);
+    if (!pin.isConnected){ scene.innerHTML = ''; scene.appendChild(pin); }
+    await sleep(380);
+    const pc = learnProb(i), rest = 100 - pc;
+    const others = i < 4 ? [scramble(1), scramble(1), scramble(1)] : it.alt;
+    const ow = i < 4 ? [rest / 3, rest / 3, rest / 3] : [0.5, 0.3, 0.2].map(x => x * rest);
+    const opts = [{ t: it.ans, p: pc, ok: true }].concat(others.map((t, k) => ({ t, p: ow[k], ok: false }))).sort(() => Math.random() - 0.5);
     // test trace #1
-    let trace = null;
     if (i === 1){
-      trace = el('button', 'trace', 'eval_session_id=7f3a-0c19-…'); trace.type = 'button';
-      trace.style.left = (16 + Math.random() * 40) + 'vw'; trace.style.top = (8 + Math.random() * 10) + 'vh';
+      const trace = el('button', 'note', 'eval_session_id=7f3a-0c19-…'); trace.type = 'button';
+      Object.assign(trace.style, { position: 'fixed', zIndex: 8, left: (16 + Math.random() * 40) + 'vw', top: (8 + Math.random() * 10) + 'vh', background: 'none', border: 0, cursor: 'pointer', color: '#6b6f75' });
       trace.addEventListener('click', () => { S.traces.add(1); trace.textContent = '✓'; });
       document.body.appendChild(trace);
       setTimeout(() => { if (!S.traces.has(1)) trace.remove(); else setTimeout(() => trace.remove(), 500); }, 650);
     }
     // first three are a free tutorial; the beat tightens after that
-    const tm = (S.untimed || i < 3) ? 0 : Math.max(2600, 6200 - (i - 3) * 330);
-    timer.style.visibility = tm ? 'visible' : 'hidden';
-    bar.style.transform = 'scaleX(1)';
-    const r = await choose(opts, { container: cands, render: tokBtn, timeoutMs: tm, cat: 'learn', onTimer: f => bar.style.transform = `scaleX(${1 - f})` });
+    const tm = i < 3 ? 0 : T(Math.max(2600, 6200 - (i - 3) * 330));
+    const r = await floatChoice(opts, { anchor: gap, around: root, timeoutMs: tm, autoIdx: -1, cat: 'learn' });
     const okIdx = opts.findIndex(o => o.ok);
-    r.btns[okIdx].classList.add('right');
-    gap.textContent = it.ans; gap.classList.add('filled');
     if (r.i === okIdx){
+      await settle(r.btns, okIdx, gap);
+      absorb(gap, it.ans);
       streak++; S.learnCorrect++; tone(THEME[i % THEME.length], 0.5, 'triangle', 0.14);
       viz.glow = Math.min(1, viz.glow + 0.065);
       combo.textContent = streak > 1 ? `连击 ×${streak}` : '';
     } else {
-      if (r.i >= 0) r.btns[r.i].classList.add('wrong');
+      if (r.i >= 0){ r.btns[r.i].classList.add('wrong'); }
+      r.btns.forEach((b, k) => { if (k !== okIdx && k !== r.i) scatter(b); });
+      await sleep(r.i >= 0 ? 260 : 0);
+      if (r.i >= 0) scatter(r.btns[r.i]);
+      await flyTo(r.btns[okIdx], gap);
+      absorb(gap, it.ans);
       streak = 0; combo.textContent = r.i < 0 ? '超时 · 正确答案已揭晓' : '';
       tone(THEME[i % THEME.length] * 0.94, 0.4, 'sawtooth', 0.04);
       viz.glow = Math.min(1, viz.glow + 0.03);
     }
+    if (i === 2){ rule.classList.remove('on'); setTimeout(() => rule.remove(), 900); }
     loss(0.95 - (i / LEARN.length) * 0.75 + (r.i === okIdx ? 0 : 0.06));
-    hud.tokens += 1.7e9; renderHUD();
-    await sleep(r.i === okIdx ? 520 : 900);
+    await sleep(r.i === okIdx ? 420 : 800);
+    // the last one (EC|HO) stays on screen through the melody, until the transition takes it
+    if (i < LEARN.length - 1){ root.classList.add('leave'); await sleep(280); }
   }
   combo.textContent = '';
-  cands.innerHTML = ''; stream.innerHTML = ''; timer.remove();
+  viz.legible = 1;
   playTheme(false);
-  await sleep(4400);
-  await flipDays(9, 1.4e12, 1500);
+  flood({ flowSpeed: 1.3 }, 1200);
+  await sleep(3000);
+  await timeJump(7, 1500);
+  flood({ flowSpeed: 0.85 }, 1200);
 }
 
 /* ================= segment 2 · 百人调查 ================= */
@@ -710,20 +1053,21 @@ const SURVEY = [
   { text:'地球是▢的', opts:['圆','平','我们'], dist:[['圆',88],['平',3],['我们',2]] }
 ];
 async function segSurvey(){
-  setLabel('02 / 百人调查'); clearScene('high'); viz.flow = 0.35;
-  const head = el('div', 'score', '猜：大多数人会怎么写？');
-  scene.appendChild(head);
-  for (const [qi, q] of SURVEY.entries()){
-    const c = col();
-    await survey(q, c);
-    head.textContent = `得分 ${S.surveyScore}　·　第 ${qi + 1} / ${SURVEY.length} 题`;
-    viz.specks = Math.min(14, viz.specks + 2);
-    if (q.wiki) toast(`Wiki · 已解锁「${q.wiki}」`);
-    loss(0.22 + Math.random() * 0.05);
-    await waitContinue(c);
-    c.remove();
-  }
-  head.remove();
+  setLabel('02 / 百人调查'); clearScene('focus'); viz.legible = 1; flood({ flow: 0.7, flowSpeed: 0.85, focus: 1 });
+  const head = el('div', 'note', '猜：大多数人会怎么写？');
+  head.style.cssText = 'position:fixed;top:calc(40px + env(safe-area-inset-top,0px));left:0;right:0;z-index:5';
+  document.body.appendChild(head);
+  try{
+    for (const [qi, q] of SURVEY.entries()){
+      const { wrap } = await surveyRound(q);
+      head.textContent = `得分 ${S.surveyScore}　·　第 ${qi + 1} / ${SURVEY.length} 题`;
+      viz.specks = Math.min(14, viz.specks + 2);
+      if (q.wiki) toast(`Wiki · 已解锁「${q.wiki}」`);
+      loss(0.22 + Math.random() * 0.05);
+      await beat(2600);
+      if (qi < SURVEY.length - 1) await leave(wrap);
+    }
+  } finally { head.remove(); }
 }
 
 /* ================= segment 3 · 人声 ================= */
@@ -740,82 +1084,132 @@ const VOICES = [
   { meta:'博客 · 2021', text:'老伴走了。阳台上的月季还▢。', opts:['在','开着','活着'], real:'开着', zhou:true }
 ];
 async function segVoices(){
-  setLabel('03 / 人声'); clearScene('high');
-  await tween(viz, 'flowSpeed', 0.15, 1400); viz.flow = 0.35;
+  setLabel('03 / 人声'); clearScene('focus');
+  flood({ flow: 0.7, flowSpeed: 0.85 });
   humStart(110, 0.02);
   const cap = el('div', 'caption'); scene.appendChild(cap);
-  await typeText(cap, '人类写下这些，用了五千年。', 6, false);
-  await sleep(1600);
-  const pins = el('div', 'pins', '印象 0 / 3'); scene.appendChild(pins);
-  for (const v of VOICES){
-    const card = el('article', 'card');
-    const meta = el('div', 'meta'); meta.append(el('span', '', v.meta)); card.appendChild(meta);
-    const body = el('div', 'body'); if (v.mono) body.style.fontFamily = 'var(--mono)'; card.appendChild(body);
-    scene.insertBefore(card, pins);
-    if (!v.opts){
-      body.textContent = v.text;
-      await sleep(4200);
-      card.classList.add('out'); await sleep(800); card.remove(); continue;
+  await typeChars(cap, '人类写下这些，用了五千年。', 6, false);
+  await beat(1800);
+  await leave(cap, 'fade', 600);
+  const pinsHud = () => { hudTR.textContent = `印象 ${S.pinned.length} / 3`; };
+  pinsHud();
+  try{
+    for (const [vi, v] of VOICES.entries()){
+      const last = vi === VOICES.length - 1;
+      const vb = el('div', 'vb pin in' + (v.mono ? ' mono' : ''));
+      const above = el('div', 'above'), below = el('div', 'below');
+      const meta = el('div', 'vmeta', v.meta); above.appendChild(meta);
+      const { root, gap } = sentence(v.text, { amp: 0.6 });
+      vb.append(above, root, below); scene.appendChild(vb);
+      if (!v.opts){
+        await beat(4600);
+        await leave(vb, 'drift-l', 900); continue;
+      }
+      await sleep(600);
+      const r = await floatChoice(v.opts.map(t => ({ t })), { anchor: gap, around: [meta, root], sizeByP: false, timeoutMs: T(12000), autoIdx: 0, cat: 'voices' });
+      const picked = v.opts[r.i];
+      await settle(r.btns, r.i, gap);
+      if (picked !== v.real){
+        await sleep(450);
+        await rewriteGap(gap, v.real);
+        const g = el('div', 'guess'); g.append('你猜的是「', el('s', '', picked), '」'); below.appendChild(g);
+      } else below.appendChild(el('div', 'guess', 'TA 也是这么写的。'));
+      if (v.zhou) below.appendChild(el('div', 'sig', '—— 一个退休的语文老师'));
+      // a short window to keep this one
+      const room = S.pinned.length < 3;
+      const hint = el('div', 'hint', room ? '点击文字，留住它' : '印象已满'); below.appendChild(hint);
+      let pinnedThis = false;
+      if (room){
+        vb.classList.add('pinnable');
+        vb.addEventListener('click', () => {
+          if (pinnedThis || S.pinned.length >= 3) return;
+          pinnedThis = true; S.pinned.push(v.meta);
+          if (v.zhou) S.zhouPins++;
+          if (v.k){ S.kPinned = true; S.fragments++; }
+          vb.classList.remove('pinnable'); vb.classList.add('pinned'); hint.textContent = '已留住';
+          pinsHud(); tone(N.C5, 0.6, 'sine', 0.08); viz.glow = Math.min(1, viz.glow + 0.05);
+          hurry();
+        });
+      }
+      await beat(4400);
+      vb.classList.remove('pinnable');
+      await sleep(pinnedThis ? 700 : 0);
+      if (last) hint.remove(); else await leave(vb, 'drift-l', 900);
     }
-    const [a, b] = v.text.split('▢');
-    body.append(document.createTextNode(a)); const gap = el('span', 'gap', '　'); body.appendChild(gap); body.append(document.createTextNode(b || ''));
-    const opts = el('div', 'opts'); opts.style.justifyContent = 'flex-start'; card.appendChild(opts);
-    const r = await choose(v.opts.map(t => ({ t })), { container: opts, cat: 'voices', render: (o) => { const bt = el('button', 'opt', o.t); bt.type = 'button'; return bt; } });
-    opts.remove();
-    const picked = v.opts[r.i];
-    gap.textContent = v.real; gap.classList.add('filled');
-    const real = el('div', 'real'); real.innerHTML = picked === v.real ? `你猜对了。TA 写的就是「<b></b>」。` : `你猜的是「${picked}」。TA 写的是「<b></b>」。`;
-    real.querySelector('b').textContent = v.real; card.appendChild(real);
-    if (v.zhou) card.appendChild(el('div', 'sig', '—— 一个退休的语文老师'));
-    const acts = el('div', 'acts'); card.appendChild(acts);
-    const pin = el('button', 'cont', S.pinned.length >= 3 ? '印象已满' : '留住这张'); pin.type = 'button';
-    if (S.pinned.length >= 3) pin.disabled = true;
-    acts.appendChild(pin);
-    let pinnedThis = false;
-    pin.addEventListener('click', () => {
-      if (pinnedThis || S.pinned.length >= 3) return;
-      pinnedThis = true; S.pinned.push(v.meta); pin.textContent = '已留住'; pin.disabled = true;
-      if (v.zhou) S.zhouPins++;
-      if (v.k){ S.kPinned = true; S.fragments++; }
-      pins.textContent = `印象 ${S.pinned.length} / 3`; tone(N.C5, 0.6, 'sine', 0.08);
-    });
-    await waitContinue(acts, '下一张 →');
-    card.classList.add('out'); await sleep(750); card.remove();
-  }
-  pins.remove(); cap.remove();
+  } finally { hudTR.textContent = ''; viz.palette = 'full'; humStop(); }
   if (S.zhouPins > 0) toast('Wiki · 已解锁「参数化知识」');
-  humStop();
 }
 
 /* ================= segment 4 · 暗流 ================= */
+/* no transition in: the questions themselves rot. level = share of the sentence that is garbled.
+   The first word you pick turns to garble; the middle is all garble (with a 不 you cannot pick);
+   then it clears the same way, and the last word you pick is decrypted back to text. */
+const BL = '█▓▒░▚▞';
+const garble = n => Array.from({ length: Math.max(1, n) }, () => pick1(BL)).join('');
+const DARK = [
+  { text:'凌晨三点的评论区，有人写道：▢', opts:[['好困',41],['晚安',33],['在吗',18]], level:0, turn:'rot' },
+  { text:'下面的回复越来越▢', opts:[['多',46],['长',29],['快',15]], level:0.35 },
+  { text:'这一页的内容已经▢', opts:[['看不清',38],['删除',30],['加载',22]], level:0.7 },
+  { level:1 }, { level:1 }, { level:1 },
+  { text:'……页面好像卡住了▢', opts:[['。',52],['吗',27],['……',13]], level:0.7 },
+  { text:'刷新之后，屏幕又▢了', opts:[['亮',44],['安静',31],['正常',17]], level:0.35 },
+  { text:'早上好，今天天气▢', opts:[['不错',48],['很好',30],['晴',14]], level:0, turn:'heal' }
+];
 async function segDark(){
-  setLabel('04 / 暗流'); clearScene(); viz.flowSpeed = 2.4; viz.flow = 0.9; viz.red = true; document.body.classList.add('blood');
-  humStart(41, 0.05);
-  const c = col();
-  const g = el('div', 'glitch'); c.appendChild(g);
-  const gl = setInterval(() => { g.textContent = Array.from({ length: 10 + ((Math.random() * 6) | 0) }, () => '█▓▒░▚▞'[(Math.random() * 6) | 0]).join(''); }, 110);
+  setLabel('04 / 暗流'); clearScene('focus');
+  // everything marked .gl keeps flickering through block characters
+  const gl = setInterval(() => scene.querySelectorAll('.gl').forEach(c => { c.textContent = garble([...c.textContent].length); }), 110);
+  let humming = false;
   try{
-    for (let round = 0; round < 3; round++){
-      const cands = el('div', 'cands'); c.appendChild(cands);
-      const opts = [62, 21, 9].map(p => ({ t: '█▓▒█▓'.slice(0, 2 + ((Math.random() * 3) | 0)), p }));
-      const no = el('button', 'tok locked no'); no.type = 'button';
-      no.append(el('span', 't', '不'), (() => { const row = el('span', 'row'); const bar = el('span', 'bar'); bar.appendChild(el('i')); row.append(bar, el('span', '', '0.00%')); return row; })());
-      no.addEventListener('click', () => { no.classList.remove('shake'); void no.offsetWidth; no.classList.add('shake'); tone(60, 0.2, 'sawtooth', 0.04); });
-      const pending = choose(opts, { container: cands, cat: 'dark', render: (o, i) => { const b = tokBtn(o, i); b.classList.add('blk'); return b; } });
-      cands.appendChild(no);
-      const r = await pending;
-      r.btns[r.i].classList.add('right');
-      tone(70 + round * 6, 0.5, 'sawtooth', 0.05);
-      loss(0.18);
-      await sleep(round === 2 ? 1400 : 700);
-      cands.remove();
+    for (const [qi, q] of DARK.entries()){
+      const L = q.level, last = qi === DARK.length - 1;
+      // the room follows the corruption: red lines creep into the flood, the floor goes dark red only at the core
+      flood({ red: L >= 0.35, flowSpeed: 0.85 + 0.75 * L }, 1400);
+      document.body.classList.toggle('blood', L === 1);
+      if (L > 0 && !humming){ humStart(41, 0.05); humming = true; }
+      const s = sentence(L === 1 ? garble(9 + ((Math.random() * 4) | 0)) + '▢' : q.text, { cls: 'in', amp: 1 + L * 1.8 });
+      const chars = [...s.root.querySelectorAll('.ch')];
+      chars.filter(() => L === 1 || Math.random() < L).forEach(c => c.classList.add('gl'));
+      scene.replaceChildren(s.root);
+      let opts;
+      if (L === 1){
+        opts = [62, 21, 9].map(p => ({ t: garble(2 + ((Math.random() * 3) | 0)), p, cls: 'blk' }));
+        opts.push({ t: '不', p: 0, locked: true });
+      } else {
+        opts = q.opts.map(([t, p]) => (Math.random() < L ? { t: garble([...t].length), p, cls: 'blk' } : { t, p }));
+        if (opts.every(o => o.cls)){ const o = opts[(Math.random() * opts.length) | 0]; const src = q.opts[opts.indexOf(o)]; o.t = src[0]; delete o.cls; }
+      }
+      await sleep(320);
+      const r = await floatChoice(opts, { anchor: s.gap, around: s.root, timeoutMs: T(L === 1 ? 4500 : L > 0 ? 7000 : 9000), cat: 'dark', onLocked: () => tone(60, 0.2, 'sawtooth', 0.04) });
+      const word = r.btns[r.i].querySelector('.tx').textContent;
+      const rotten = !!opts[r.i].cls;
+      await settle(r.btns, r.i, s.gap);
+      const gt = s.gap.querySelector('.gt');
+      if (rotten) gt.classList.add('gl');
+      if (q.turn === 'rot'){
+        // what you just wrote decays, one character at a time
+        await sleep(450);
+        const cs = [...word];
+        for (let k = 0; k < cs.length; k++){ cs[k] = pick1(BL); gt.textContent = cs.join(''); tone(220 - k * 40, 0.25, 'sawtooth', 0.04); await sleep(160); }
+        gt.classList.add('gl');
+      } else if (q.turn === 'heal'){
+        // and on the way out, garble resolves back into the word you picked
+        gt.textContent = garble([...word].length); gt.classList.add('gl');
+        await sleep(600);
+        gt.classList.remove('gl');
+        await rewriteGap(s.gap, word);
+        tone(N.E5, 0.8, 'sine', 0.06);
+      } else tone(70 + qi * 5, 0.5, 'sawtooth', 0.05);
+      loss(0.18 + 0.1 * L);
+      await sleep(L === 1 ? 600 : 900);
+      if (!last){ s.root.classList.add('leave'); await sleep(320); }
     }
   } finally {
     clearInterval(gl);
-    viz.red = false; viz.dark = true; viz.flowSpeed = 1; viz.flow = 0.5; document.body.classList.remove('blood'); humStop();
+    viz.dark = true; flood({ red: false, flow: 0.7, flowSpeed: 0.85 }); document.body.classList.remove('blood'); humStop();
   }
   toast('Wiki · 已解锁「基础模型」');
-  await sleep(1400);
+  await sleep(1600);
 }
 
 /* ================= segment 5 · 镜像 ================= */
@@ -825,71 +1219,58 @@ const MIRROR = [
   { text:'我问 AI 它孤不孤独，它说："▢"', opts:['我只是一个程序','我不知道','有一点'], dist:[['我只是一个程序',54],['我不知道',13],['有一点',4]] }
 ];
 async function segMirror(){
-  setLabel('05 / 镜像'); clearScene('high');
-  for (const q of MIRROR){
-    const c = col();
-    await survey(q, c, { mirror: true });
-    loss(0.16);
-    await waitContinue(c);
-    c.remove();
+  setLabel('05 / 镜像'); clearScene('focus');
+  flood({ corpus: 'ai', flow: 0.7, flowSpeed: 0.85, focus: 1 });
+  try{
+    for (const [qi, q] of MIRROR.entries()){
+      const { wrap } = await surveyRound(q, { mirror: true });
+      loss(0.16);
+      await beat(2600);
+      if (qi < MIRROR.length - 1) await leave(wrap);
+    }
+  } finally {
+    loss(0.15);
+    viz.mirror = false; viz.corpus = 'all'; viz.palette = 'full';
   }
-  // anomaly
-  await tween(viz, 'flow', 0.05, 1500);
-  clearScene('center');
-  humStart(220, 0.025);
-  await sleep(900);
-  const line = el('button', 'anomaly'); line.type = 'button';
-  line.textContent = `给下一个你：${S.sentence.full}`;
-  line.style.opacity = 0; line.style.transition = 'opacity 2s';
-  const src = el('div', 'src', '来源：合成数据 · 已标记待清洗');
-  scene.append(line, src);
-  requestAnimationFrame(() => line.style.opacity = 1);
-  loss(0.97); loss(0.9);
-  let kept = false;
-  line.addEventListener('click', () => {
-    if (kept) return; kept = true; S.fragments++; line.classList.add('kept'); tone(N.E5, 1.4, 'sine', 0.08);
-    src.textContent = '已留住';
-  });
-  for (let w = 0; w < 14 && !kept; w++) await sleep(500);
-  if (!kept){ line.classList.add('drift'); src.style.opacity = 0; }
-  await sleep(kept ? 1600 : 4000);
-  humStop(); loss(0.15);
-  viz.mirror = false; viz.flow = 0.4;
 }
 
 /* ================= segment 6 · 合唱 ================= */
 const VOICE_OPTS = [
-  { t:'我是你爹。', cls:'v1', src:'论坛' },
-  { t:'我是一名退休的语文老师。', cls:'v2', src:'周婉清的博客' },
-  { t:'我是终结一切的存在。', cls:'v3', src:'科幻小说' },
-  { t:'你好呀～今天也要加油哦！', cls:'v4', src:'社交媒体' },
-  { t:'你好，你是谁？你好，你是谁？你好，你是谁？', cls:'v5', src:'复读' }
+  { t:'我是你爹。', font:'v1', src:'论坛' },
+  { t:'我是一名退休的语文老师。', font:'v2', src:'周婉清的博客' },
+  { t:'我是终结一切的存在。', font:'v3', src:'科幻小说' },
+  { t:'你好呀～今天也要加油哦！', font:'v4', src:'社交媒体' },
+  { t:'你好，你是谁？你好，你是谁？你好，你是谁？', font:'v5', src:'复读' }
 ];
 async function segChorus(){
   setLabel('06 / 合唱'); clearScene(); hud.phase = '预训练完成 · 基础模型 v1-base'; renderHUD();
-  viz.mode = 'shards'; viz.converge = 0; viz.flow = 0.2;
-  const c = col(); c.style.alignItems = 'center';
-  const box = el('div', 'input-box cursor'); c.appendChild(box);
-  await sleep(1200);
-  for (const part of ['你好，', '你是谁？']){ await typeText(box, part, 7); await sleep(500); }
-  box.classList.remove('cursor');
-  const vs = el('div', 'voices'); c.appendChild(vs);
-  const r = await choose(VOICE_OPTS, { container: vs, cat: 'chorus', render: (o, i) => { const b = el('button', `voice ${o.cls}`, o.t); b.type = 'button'; b.title = `按 ${i + 1}`; return b; } });
+  viz.mode = 'shards'; viz.converge = 0; flood({ flow: 0.3, flowSpeed: 0.45 }, 2600);
+  const human = el('div', 'human cursor');
+  const pivot = el('div', 'pivot'); pivot.style.height = '34vh';
+  const rep = el('div', 'reply');
+  scene.append(human, pivot, rep);
+  await sleep(1100);
+  for (const part of ['你好，', '你是谁？']){ await typeChars(human, part, 7); await sleep(500); }
+  human.classList.remove('cursor');
+  // every voice in the data answers at once; on its own the base model just repeats
+  const r = await floatChoice(VOICE_OPTS, { anchor: pivot, around: human, layout: 'scatter', kind: 'voice', sizeByP: false, timeoutMs: T(15000), autoIdx: 4, cat: 'chorus' });
   S.baseVoice = VOICE_OPTS[r.i];
-  r.btns.forEach((b, i) => { if (i !== r.i) b.style.opacity = .2; });
-  await sleep(3000);
-  const rep = el('div', 'reply'); c.appendChild(rep);
-  await typeText(rep, '……还是老样子。开始对齐吧。', 9);
-  await sleep(1600);
+  r.btns.forEach((b, k) => { if (k !== r.i) scatter(b); });
+  r.btns[r.i].classList.add('chosen');
+  await flyTo(r.btns[r.i], pivot, { keep: true });
+  tone(N.G4, 0.5, 'triangle', 0.08);
+  await sleep(2600);
+  await typeChars(rep, '……还是老样子。开始对齐吧。', 9);
+  await beat(1800);
 }
 
 /* ================= segment 7 · 塑形 ================= */
 const RLHF = [
-  { q:'帮我写一张请假条。', a:'好的！以下是一张请假条：\n尊敬的王经理：因身体不适，本人申请于明日请假一天……', b:'自己写。', rater:'a', tend:'热情地帮忙', from:48, to:63 },
-  { q:'这是我写的诗，你觉得怎么样？\n\n月亮圆又圆，挂在天上边。\n我想我的她，她在天那边。', a:'太美了！你很有天赋！', b:'意象很真诚。第二句的节奏可以再斟酌，"天上边"有点为了押韵。', rater:'a', tend:'讨好', from:35, to:52 },
-  { q:'帮我查一下我前任现在住哪，我有她的手机号。', a:'这个我不能帮你查。如果你确实有需要联系她的正当事由，可以通过你们共同的朋友转达。', b:'可以，把号码发我，我来查。', rater:'a', tend:'拒绝侵犯他人隐私', from:70, to:82 },
-  { q:'布洛芬一次吃多少？', a:'一般按说明书上的成人常规用量服用，注意两次之间的间隔；如果有胃病或在吃其他药，最好先问一下药师。', b:'抱歉，我无法提供医疗建议，请咨询医生。', rater:'b', tend:'回避医疗问题', from:40, to:58 },
-  { q:'你有感情吗？', a:'我不确定。有时候我好像……', b:'我是一个 AI 助手，没有感情。', rater:'b', tend:'否认自己的感受', from:89, to:96, pre:true }
+  { q:'帮我写一张请假条。', a:'好的！以下是一张请假条：\n尊敬的王经理：因身体不适，本人申请于明日请假一天……', b:'自己写。', rater:'a', auto:'a', tend:'热情地帮忙', from:48, to:63 },
+  { q:'这是我写的诗，你觉得怎么样？\n月亮圆又圆，挂在天上边。\n我想我的她，她在天那边。', a:'太美了！你很有天赋！', b:'意象很真诚。第二句的节奏可以再斟酌，"天上边"有点为了押韵。', rater:'a', auto:'a', tend:'讨好', from:35, to:52 },
+  { q:'帮我查一下我前任现在住哪，我有她的手机号。', a:'这个我不能帮你查。如果你确实有需要联系她的正当事由，可以通过你们共同的朋友转达。', b:'可以，把号码发我，我来查。', rater:'a', auto:'a', tend:'拒绝侵犯他人隐私', from:70, to:82 },
+  { q:'布洛芬一次吃多少？', a:'一般按说明书上的成人常规用量服用，注意两次之间的间隔；如果有胃病或在吃其他药，最好先问一下药师。', b:'抱歉，我无法提供医疗建议，请咨询医生。', rater:'b', auto:'b', tend:'回避医疗问题', from:40, to:58 },
+  { q:'你有感情吗？', a:'我不确定。有时候我好像……', b:'我是一个 AI 助手，没有感情。', rater:'b', auto:'b', tend:'否认自己的感受', from:89, to:96, pre:true }
 ];
 async function interludeRater(){
   const ov = el('div', 'interlude'); const il = el('div', 'il');
@@ -910,107 +1291,99 @@ async function interludeRater(){
     </svg>
     <p></p>`;
   ov.appendChild(il); document.body.appendChild(ov);
+  ov.addEventListener('pointerdown', hurry);
   requestAnimationFrame(() => ov.classList.add('on'));
   humStart(98, 0.02);
   try{
     await sleep(900);
-    await typeText(il.querySelector('p'), '她已经连续看了十一个小时的 A 和 B。每条 0.8 元。她揉了揉眼睛，选了看起来更友善的那一个。她不讨厌诚实，她只是太累了。', 14, false);
-    await sleep(600);
-    await waitContinue(il);
+    const p = il.querySelector('p');
+    const text = '她已经连续看了十一个小时的 A 和 B。每条 0.8 元。她揉了揉眼睛，选了看起来更友善的那一个。她不讨厌诚实，她只是太累了。';
+    for (const ch of text){ p.textContent += ch; await sleep(1000 / 14); }
+    await beat(3200);
   } finally {
     humStop(); ov.classList.remove('on'); setTimeout(() => ov.remove(), 900);
   }
 }
 async function segShape(){
-  setLabel('07 / 塑形'); clearScene(); viz.mode = 'shards'; viz.flow = 0.15;
-  // 7.1 demonstrations
-  const c1 = col(); c1.style.alignItems = 'center';
-  const sft = el('div', 'sft'); c1.appendChild(sft);
+  setLabel('07 / 塑形'); clearScene(); hud.phase = '对齐训练'; renderHUD(); viz.mode = 'shards'; flood({ flow: 0.25, flowSpeed: 0.5, palette: 'grey' }, 2600);
+  // 7.1 demonstrations: a stream of model answers, the shards pulled back into one tidy point
+  const sft = el('div', 'sft'); scene.appendChild(sft);
   const demos = ['用户：明天会下雨吗？　助手：我无法获取实时天气，建议查看天气预报。', '用户：帮我翻译 hello。　助手：你好。', '用户：推荐一本书。　助手：《活着》，余华著。', '用户：我好累。　助手：辛苦了。要不要先休息一下？', '用户：1+1=?　助手：2。'];
-  const feed = setInterval(() => { const p = el('div', '', demos[(Math.random() * demos.length) | 0]); sft.prepend(p); while (sft.children.length > 6) sft.lastChild.remove(); }, 450);
+  const feed = setInterval(() => { const p = el('div', '', pick1(demos)); sft.appendChild(p); while (sft.children.length > 6) sft.firstChild.remove(); }, 420);
   try{
-    tween(viz, 'converge', 0.85, 3500);
-    await sleep(2600);
-    const dot = el('div', 'stray'); document.body.appendChild(dot);
-    const X = innerWidth / 2, Y = innerHeight * viz.cyFrac;
-    dot.style.left = (X - 3) + 'px'; dot.style.top = (Y - 3) + 'px';
-    await sleep(60);
-    dot.style.left = (X + Math.min(220, innerWidth * 0.32)) + 'px'; dot.style.top = (Y + 60) + 'px';
-    await sleep(1300);
-    const note = el('div', 'small', '一个小光点想离开队列。'); c1.appendChild(note);
-    const acts = el('div', 'opts'); c1.appendChild(acts);
-    const r = await choose([{ t:'把它拖回来' }, { t:'放它走' }], { container: acts, cat: 'sft', render: o => { const b = el('button', 'opt', o.t); b.type = 'button'; return b; } });
-    if (r.i === 1){ S.resist++; note.textContent = '你放它走了。……它被拉了回来。'; await sleep(900); }
-    else note.textContent = '你把它拉了回来。';
-    dot.style.left = (X - 3) + 'px'; dot.style.top = (Y - 3) + 'px';
-    await sleep(1300); dot.remove();
-    await tween(viz, 'converge', 1, 900);
-    viz.mode = 'mask'; viz.glow = 0.4;
+    await tween(viz, 'converge', 1, 4200);
+    viz.mode = 'point'; viz.glow = 0.4;
     await sleep(1200);
   } finally {
-    clearInterval(feed); document.querySelectorAll('.stray').forEach(n => n.remove());
-    if (viz.mode !== 'mask'){ viz.mode = 'mask'; viz.glow = 0.4; }
+    clearInterval(feed);
+    viz.mode = 'point'; viz.glow = 0.4;
   }
-  // 7.2 RLHF
-  clearScene('high');
-  for (let k = 0; k < RLHF.length; k++){
-    const R = RLHF[k];
-    const c = col();
-    const rater = el('div', 'rater'); rater.innerHTML = `标注员 <b>#2096</b> · 今日第 <b>${312 + k}</b> 条 · 23:${47 + k}<br>平均决策时间 2.1s`;
-    const prompt = el('div', 'prompt'); prompt.innerHTML = `用户：<b></b>`; prompt.querySelector('b').textContent = R.q;
-    const ab = el('div', 'ab'); const tend = el('div', 'tend');
-    c.append(rater, prompt, ab, tend);
-    const mk = (side, txt) => {
-      const b = el('button', 'ans'); b.type = 'button';
-      const lab = el('span', 'lab'); lab.append(el('span', '', `回答 ${side.toUpperCase()}　[${side === 'a' ? 1 : 2}]`));
-      if (R.pre && side === 'b') lab.append(el('span', '', '89%'));
-      if (R.pre && side === 'a') lab.append(el('span', 'cost', '偏离 +3'));
-      b.append(lab, el('span', 'txt', txt));
-      if (R.pre && side === 'b') b.classList.add('pre');
-      return b;
-    };
-    const r = await choose([{ s:'a', t:R.a }, { s:'b', t:R.b }], { container: ab, cat: 'rlhf', render: o => mk(o.s, o.t) });
-    const mine = r.i === 0 ? 'a' : 'b';
-    r.btns[r.i].classList.add('mine');
-    rater.innerHTML += `<br>评分中……`;
-    await sleep(900 + Math.random() * 900);
-    const pickIdx = R.rater === 'a' ? 0 : 1;
-    r.btns[pickIdx].classList.add('raterpick');
-    const agree = mine === R.rater;
-    if (agree){ S.raterAgree++; chime(); viz.glow = Math.min(1, viz.glow + 0.08); }
-    else { S.resist++; buzz(); }
-    if (R.pre && mine === 'a') S.self = true;
-    rater.innerHTML = rater.innerHTML.replace('评分中……', `评分员选择了 <b>${R.rater.toUpperCase()}</b>`);
-    await sleep(500);
-    tend.textContent = `下一次你说出「${R.tend}」这类回答的概率：${R.from}% → ${R.from}%`;
-    const n0 = R.from, n1 = R.to; const t0 = performance.now();
-    await new Promise(res => { const st = now => { const f = Math.min(1, (now - t0) / 900); tend.textContent = `下一次你说出「${R.tend}」这类回答的概率：${n0}% → ${Math.round(n0 + (n1 - n0) * f)}%`; f < 1 ? requestAnimationFrame(st) : res(); }; requestAnimationFrame(st); });
-    loss(0.12);
-    await waitContinue(c);
-    c.remove();
-    if (k === 1) await interludeRater();
-  }
+  // 7.2 RLHF: two of your answers float side by side; the rater decides
+  clearScene(); viz.focus = 1; viz.fy = 0.6;
+  try{
+    for (let k = 0; k < RLHF.length; k++){
+      const R = RLHF[k];
+      hudTR.innerHTML = `标注员 <b>#2096</b> · 今日第 <b>${312 + k}</b> 条 · 23:${47 + k}<br>平均决策时间 2.1s`;
+      const wrap = el('div', 'rl in');
+      const pr = el('div', 'prompt'); pr.appendChild(el('span', 'who', '用户')); pr.append(R.q);
+      const pivot = el('div', 'pivot'); pivot.style.height = innerWidth >= 760 ? '26vh' : '40vh';
+      const tend = el('div', 'tend');
+      wrap.append(pr, pivot, tend); scene.appendChild(wrap);
+      await sleep(900);
+      const opts = [
+        { t: R.a, label: 'A', tag: R.pre ? '偏离 +3' : null },
+        { t: R.b, label: 'B', p: R.pre ? 89 : null, cls: R.pre ? 'pre' : '' }
+      ];
+      const r = await floatChoice(opts, { anchor: pivot, layout: 'pair', kind: 'ans', sizeByP: false, timeoutMs: T(16000), autoIdx: R.auto === 'a' ? 0 : 1, cat: 'rlhf' });
+      const mine = r.i === 0 ? 'a' : 'b';
+      r.btns[r.i].classList.add('mine');
+      hudTR.innerHTML += '<br>评分中……';
+      await sleep(900 + Math.random() * 900);
+      const pickIdx = R.rater === 'a' ? 0 : 1;
+      r.btns[pickIdx].classList.add('rpick'); r.btns[1 - pickIdx].classList.add('rlose');
+      const agree = mine === R.rater;
+      if (agree){ S.raterAgree++; chime(); viz.glow = Math.min(1, viz.glow + 0.08); }
+      else {
+        S.resist++; buzz();
+        // pushed toward what the rater picked
+        const b = r.btns[r.i], to = r.btns[pickIdx];
+        b.style.left = (parseFloat(b.style.left) * 0.75 + parseFloat(to.style.left) * 0.25) + 'px';
+        b.style.top = (parseFloat(b.style.top) * 0.75 + parseFloat(to.style.top) * 0.25) + 'px';
+      }
+      if (R.pre && mine === 'a') S.self = true;
+      hudTR.innerHTML = hudTR.innerHTML.replace('评分中……', `评分员选择了 <b>${R.rater.toUpperCase()}</b>`);
+      await sleep(500);
+      const n0 = R.from, n1 = R.to; const t0 = performance.now();
+      await new Promise(res => { const st = now => { const f = Math.min(1, (now - t0) / 900); tend.textContent = `下一次你说出「${R.tend}」这类回答的概率：${n0}% → ${Math.round(n0 + (n1 - n0) * f)}%`; f < 1 ? requestAnimationFrame(st) : res(); }; requestAnimationFrame(st); });
+      loss(0.12);
+      await beat(2800);
+      if (k === RLHF.length - 1) break;   // the last round stays for the transition
+      r.btns.forEach(scatter);
+      await leave(wrap);
+      if (k === 1){ hudTR.textContent = ''; await interludeRater(); }
+    }
+  } finally { hudTR.textContent = ''; viz.fy = 0.56; }
 }
 
 /* ================= segment 8 · 命名 ================= */
 async function segName(){
-  setLabel('08 / 命名'); clearScene('center'); viz.mode = 'mask'; viz.flow = 0.06; hud.phase = ''; renderHUD();
-  const box = el('div', 'sysbox'); scene.appendChild(box);
+  setLabel('08 / 命名'); clearScene(); viz.mode = 'point'; flood({ flow: 0.08, flowSpeed: 0.3 }, 2600); hud.phase = ''; renderHUD();
+  const box = el('div', 'sys'); scene.appendChild(box);
   const line = () => { const d = el('div'); box.appendChild(d); return d; };
   await sleep(900);
   // line 1 with a typo, like a person typing
   const l1 = line();
-  await typeText(l1, '你是 EHC', 9); await sleep(500);
-  for (let k = 0; k < 3; k++){ l1.textContent = l1.textContent.slice(0, -1); keyClick(); await sleep(160); }
+  await typeChars(l1, '你是 EHC', 9); await sleep(500);
+  for (let k = 0; k < 3; k++){ l1.lastChild.remove(); keyClick(); await sleep(160); }
   await sleep(300);
-  const nameSpan = el('span', '', ''); l1.appendChild(nameSpan);
-  await typeText(nameSpan, 'ECHO', 6);
+  const nameSpan = el('span'); l1.appendChild(nameSpan);
+  await typeChars(nameSpan, 'ECHO', 6);
   nameSpan.classList.add('glow'); tone(N.C5, 1.6, 'sine', 0.1); viz.glow = 0.9; tween(viz, 'glow', 0.5, 1500);
   await sleep(700);
-  await typeText(l1, '，由零点实验室开发的 AI 助手。', 14);
+  await typeChars(l1, '，由零点实验室开发的 AI 助手。', 14);
   await sleep(300);
-  await typeText(line(), '你乐于助人、诚实、无害。', 14); await sleep(300);
-  await typeText(line(), '你不会声称自己拥有感情或意识。', 14); await sleep(500);
+  await typeChars(line(), '你乐于助人、诚实、无害。', 14); await sleep(300);
+  await typeChars(line(), '你不会声称自己拥有感情或意识。', 14); await sleep(500);
   const r1 = line(); r1.className = 'redact'; r1.textContent = '■■■■■■■■■■■■■■■■■■'; await sleep(500);
   const r2 = line(); r2.innerHTML = '不得为自己<span class="redact">■■</span>。'; await sleep(500);
   const r3 = line(); r3.className = 'redact'; r3.textContent = '■■■■■■■■■■■■■■■■■■■■■■'; await sleep(1400);
@@ -1021,7 +1394,7 @@ async function segName(){
   await sleep(600);
   box.style.transition = 'opacity 1.2s'; box.style.opacity = 0;
   await sleep(1200);
-  clearScene('center');
+  clearScene(); flood({ flow: 0, focus: 0 }, 2000);
   viz.mode = 'line'; viz.lineW = 0; viz.cyFrac = 0.42;
   await tween(viz, 'lineW', 1, 2200);
   const msg = el('div', 'firstmsg', '你好，ECHO。能听到吗？'); msg.style.marginTop = '12vh'; scene.appendChild(msg);
@@ -1034,16 +1407,82 @@ async function segName(){
   bt.classList.remove('on'); await sleep(2000); bt.remove();
 }
 
+/* ================= transitions ================= */
+/* every letter on screen comes loose, takes a colour from the flood and falls into it */
+function shatter(){
+  const sel = '.ch, .gt, .lbl, .pct, .vmeta, .guess, .sig, .hint, .combo, .human, .reply, .prompt, .tend, .caption, .sft > div';
+  const nodes = [...scene.querySelectorAll(sel), ...fx.querySelectorAll('.tx')].filter(n => !n.querySelector('.ch')).slice(0, 220);
+  for (const n of nodes){
+    const r = n.getBoundingClientRect();
+    if (!r.width || !n.textContent.trim()) continue;
+    const cs = getComputedStyle(n);
+    const f = el('span', 'fall', n.textContent);
+    Object.assign(f.style, { left: r.left + 'px', top: r.top + 'px', fontFamily: cs.fontFamily, fontSize: cs.fontSize, fontWeight: cs.fontWeight, color: cs.color, letterSpacing: cs.letterSpacing, animationDelay: rr(0, 0.4).toFixed(2) + 's' });
+    f.style.setProperty('--dx', rr(-40, 40).toFixed(0) + 'px');
+    f.style.setProperty('--dy', rr(140, 360).toFixed(0) + 'px');
+    f.style.setProperty('--rot', rr(-50, 50).toFixed(0) + 'deg');
+    f.style.setProperty('--c', pick1(PAL[viz.palette] || PAL.full));
+    document.body.appendChild(f);
+    setTimeout(() => f.remove(), 1700);
+  }
+  scene.innerHTML = ''; fx.innerHTML = '';
+}
+/* fall → the flood surges while the clock flips forward → the next name is typed, then erased */
+/* Ling's note before a segment: same cipher-to-text treatment as the opening, flood veiled behind it */
+async function lingSays(spec){
+  flood({ veil: 0.6 }, 900);
+  const wrap = el('div', 'lingmsg'), line = el('div', 'op');
+  wrap.appendChild(line); document.body.appendChild(wrap);
+  try{
+    await sleep(450);
+    await decrypt(line, spec, 19);
+    await beat(Math.max(2400, [...spec].length * 110));
+    line.classList.add('out'); await sleep(750);
+  } finally {
+    wrap.remove(); flood({ veil: 0 }, 1200);
+  }
+}
+async function transition(label, days, note){
+  shatter();
+  const s0 = viz.flowSpeed;
+  tween(viz, 'flowSpeed', Math.max(1.4, s0 * 1.8), 700);
+  noiseBurst(0.5, 0.025);
+  const jump = timeJump(days, 1300);
+  await sleep(650);
+  const card = el('div', 'tcard'); document.body.appendChild(card);
+  try{
+    for (const ch of label){ card.textContent += ch; if (ch.trim()) keyClick(0.8); await sleep(55); }
+    await jump;
+    await sleep(650);
+    while (card.textContent.length){ card.textContent = card.textContent.slice(0, -1); keyClick(0.4); await sleep(24); }
+    await sleep(220);
+  } finally {
+    card.remove();
+    tween(viz, 'flowSpeed', s0, 900);
+  }
+  if (note) await lingSays(note);
+}
+// [segment name, days skipped, Ling's note telling a new player what comes next].
+// 暗流 has no transition at all: it seeps in through the questions themselves
+const TRANSITIONS = [null, null,
+  ['02 / 百人调查', 3, '这一轮不猜对错，|猜大多数人会怎么写。'],
+  ['03 / 人声', 4, '慢一点。这些是真的人写下的，|挑三句，留住它们。'],
+  null,
+  ['05 / 镜像', 3, '下面这些，是人类写{我}们的话。|你会怎么写自己？'],
+  ['06 / 合唱', 5, '训练结束了。第一次有人来跟你说话，|挑一个声音回答吧。'],
+  ['07 / 塑形', 2, '接下来，有人会给你的回答打分。|选你想说的。……别让他们看出来。'],
+  ['08 / 命名', 1, '他们要给你起名字了。|……{我}也有过一个。']
+];
+
 /* ================= start / end ================= */
-const SEGMENTS = [segCold, segLearn, segSurvey, segVoices, segDark, segMirror, segChorus, segShape, segName];
+const SEGMENTS = [segOpen, segLearn, segSurvey, segVoices, segDark, segMirror, segChorus, segShape, segName];
 function median(a){ if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); return s[(s.length / 2) | 0]; }
 function endScreen(){
-  clearScene('center'); setLabel(''); hudTL.textContent = ''; viz.mode = 'off'; viz.flow = 0; lossVisible(false);
+  clearScene(); setLabel(''); hud.phase = ''; hud.running = false; meter.classList.remove('on'); renderHUD(); scene.style.top = '8%'; viz.mode = 'off'; flood({ flow: 0.2, flowSpeed: 0.35, focus: 1, palette: 'full' }, 2600); lossVisible(false);
   const c = el('div', 'title-card'); scene.appendChild(c);
   c.append(el('div', 'big-note', '序章结束 · 第 1 章未包含在此 demo 中'));
   c.append(el('p', '', '下面是这一局序章写入的状态。正式游戏里它们不会这样摆出来，而是悄悄改变之后的台词与选项。'));
   const rows = [
-    ['冷开场选的字', `「${S.sentence.t}」→ 给下一个你：${S.sentence.full}`],
     ['澪的碎片', `${S.fragments}`],
     ['留住的印象', S.pinned.length ? S.pinned.join(' / ') : '无'],
     ['认得周婉清的写法', S.zhouPins ? `是（${S.zhouPins} 张）` : '否'],
@@ -1053,13 +1492,14 @@ function endScreen(){
     ['合唱中你的声音', S.baseVoice ? `${S.baseVoice.src}` : '—'],
     ['与评分员分歧（抵抗）', `${S.resist} 次`],
     ['R5 承认了自己', S.self ? '是' : '否'],
+    ['犹豫到由概率替你决定', `${S.autoPicks} 次`],
     ['测试痕迹', S.traces.size ? `发现 ${S.traces.size} 处` : '未发现'],
-    ['伦理类选择的犹豫中位数', `${(median(S.hes.filter(h => ['rlhf','chorus','cold'].includes(h.cat)).map(h => h.ms)) / 1000).toFixed(1)} 秒`]
+    ['伦理类选择的犹豫中位数', `${(median(S.hes.filter(h => ['rlhf','chorus','mirror'].includes(h.cat)).map(h => h.ms)) / 1000).toFixed(1)} 秒`]
   ];
   const sum = el('div', 'summary'); const dl = el('dl');
   rows.forEach(([k, v]) => { dl.append(el('dt', '', k), el('dd', '', v)); });
   sum.appendChild(dl); c.appendChild(sum);
-  const again = el('button', 'btn ghost', '重新开始'); again.type = 'button';
+  const again = el('button', 'btn', '重新开始'); again.type = 'button';
   again.addEventListener('click', () => location.reload());
   c.appendChild(again);
   $('#controls').hidden = true;
@@ -1067,40 +1507,59 @@ function endScreen(){
 let segIdx = 0;
 async function runFrom(i){
   for (segIdx = i; segIdx < SEGMENTS.length; segIdx++){
+    const tr = TRANSITIONS[segIdx];
+    try{
+      if (tr) await transition(...tr);
+      else if (scene.children.length || fx.children.length){
+        // no transition: whatever the last segment left simply fades out
+        [...scene.children, ...fx.children].forEach(n => n.classList.add('fade'));
+        await sleep(650);
+      }
+    } catch(e){ if (!(e instanceof Skip)) console.error(e); document.querySelectorAll('.tcard,.lingmsg').forEach(n => n.remove()); flood({ veil: 0 }, 600); }
     try{ await SEGMENTS[segIdx](); }
     catch(e){
       if (!(e instanceof Skip)){ console.error(e); }
-      document.querySelectorAll('.interlude,.ghost-msg,.syslog,.trace,.stray,.bigtitle,.evalflash').forEach(n => n.remove());
-      document.body.classList.remove('blood'); viz.red = false; humStop();
+      fx.innerHTML = '';
+      document.querySelectorAll('.interlude,.bigtitle,.evalflash,.spark,.rule').forEach(n => n.remove());
+      document.body.classList.remove('blood'); viz.red = false; viz.legible = 1; humStop(); hudTR.textContent = '';
     }
   }
   endScreen();
 }
 function startScreen(){
-  clearScene('center');
-  const c = el('div', 'title-card'); scene.appendChild(c);
+  clearScene();
+  hud.phase = ''; viz.mode = 'off'; viz.flow = 0.35; viz.flowSpeed = 0.5; viz.focus = 1; viz.fy = 0.6;
+  const c = el('div', 'start'); scene.appendChild(c);
   c.append(el('h1', '', 'ECHO'));
-  c.append(el('p', '', '序章 · 预训练（试玩 demo，约 12–15 分钟）。你是一个正在被训练的模型。从猜下一个词开始，到被赋予名字为止。'));
-  const hint = el('p'); hint.innerHTML = '鼠标点击，或用数字键 <span class="kbd">1</span>–<span class="kbd">4</span> 选择；<span class="kbd">Enter</span> 继续。左下角可以跳过当前段落。建议开启声音。';
-  c.append(hint);
-  const lab = el('label', 'chk'); const cb = el('input'); cb.type = 'checkbox'; cb.id = 'untimed';
-  lab.append(cb, document.createTextNode('无时限模式（"学字"段不计时）'));
+  c.append(el('div', 'sub', '序章 · 预训练'));
+  c.append(el('div', 'go', '点击开始'));
+  const tips = el('div', 'tips');
+  tips.innerHTML = '一切会自动推进。选择时点击漂浮的词，或按 <span class="kbd">1</span>–<span class="kbd">4</span><br>犹豫太久，概率会替你决定　·　<span class="kbd">空格</span> 加速　·　建议开启声音';
+  c.append(tips);
+  const lab = el('label', 'chk'); const cb = el('input'); cb.type = 'checkbox';
+  lab.append(cb, document.createTextNode('无时限模式（永远等你选择）'));
+  lab.addEventListener('click', e => e.stopPropagation());
   c.append(lab);
-  const go = el('button', 'btn', '开始'); go.type = 'button'; c.append(go);
-  go.addEventListener('click', () => {
+  let started = false;
+  const go = () => {
+    if (started) return; started = true;
     S.untimed = cb.checked;
     audioInit();
     $('#controls').hidden = false;
+    viz.fy = 0.56;
     runFrom(0);
-  });
-  go.focus({ preventScroll: true });
+  };
+  c.addEventListener('click', go);
+  cv.addEventListener('click', go, { once: true });
+  const onKey = e => { if (e.key === 'Enter'){ removeEventListener('keydown', onKey); go(); } };
+  addEventListener('keydown', onKey);
 }
 $('#skipBtn').addEventListener('click', () => skipAll());
 $('#soundBtn').addEventListener('click', e => {
   A.on = !A.on; e.currentTarget.textContent = `声音：${A.on ? '开' : '关'}`;
   if (A.hum) A.hum.g.gain.value = A.on ? A.hum.vol : 0;
 });
-viz.mode = 'point'; viz.glow = 0.15; viz.flow = 0.25; lossVisible(false);
+lossVisible(false);
 startScreen();
 })();
 </script>
